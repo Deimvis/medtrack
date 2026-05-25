@@ -94,22 +94,59 @@ html, body {
 .btn.ghost { background: transparent; }
 .btn.ghost:hover { background: #eef2f7; }
 
-.btn-up,
-.btn-cycle {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  font-size: 22px;
+/* ─── Counter-as-button ────────────────────────────────── */
+/* The "current/total" text itself is the increment control.
+   It looks like plain text at rest; on hover the background turns grey
+   and a ghosted ⬆ slides in from the right. */
+.counter-btn {
+  --counter-accent: var(--success);
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 4px 10px;
+  height: 36px;
+  font-size: 18px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
-  border-radius: 50%;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+  user-select: none;
 }
-.btn-up { background: var(--success); border-color: var(--success); }
-.btn-up:hover { background: #246b30; border-color: #246b30; }
-.btn-cycle { background: var(--primary); border-color: var(--primary); }
-.btn-cycle:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.counter-btn:hover,
+.counter-btn:focus-visible {
+  background: #e6e9ef;
+  border-color: #d2d7e0;
+  outline: none;
+}
+.counter-btn:active { background: #d6dae3; }
+
+.counter-btn .counter-value { display: inline-block; }
+.counter-btn .counter-arrow {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--counter-accent);
+  transform: translateY(-1px);
+  transition: max-width 0.15s ease, opacity 0.12s ease, margin-left 0.15s ease;
+  margin-left: 0;
+}
+.counter-btn:hover .counter-arrow,
+.counter-btn:focus-visible .counter-arrow {
+  max-width: 1.2em;
+  opacity: 0.85;
+  margin-left: 6px;
+}
+.counter-btn:active .counter-arrow { opacity: 1; }
+
+.combo-cycle .counter-btn { --counter-accent: var(--primary); }
 
 .btn-danger.ghost {
   color: var(--danger);
@@ -167,14 +204,13 @@ tr.row-status-none     { background: transparent; }
 .edit-link { margin-left: 8px; font-size: 12px; color: var(--muted); text-decoration: none; }
 .edit-link:hover { color: var(--primary); text-decoration: underline; }
 
-.counter { font-variant-numeric: tabular-nums; font-weight: 600; }
-.counter .muted.small { font-weight: 400; font-size: 12px; margin-left: 4px; }
+.muted.small { font-weight: 400; font-size: 12px; }
 
 .combo .combo-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   white-space: nowrap;
 }
 
@@ -452,7 +488,7 @@ tr.row-status-none     { background: transparent; }
     flex: 0 0 auto;
   }
 
-  /* Combo cells: counter + action buttons in one tight horizontal cluster. */
+  /* Combo cells: label sits on the left, counter button + ⋮ next to it. */
   .med-table td.combo { padding: 8px 12px; }
   .med-table td.combo::before {
     display: inline-block;
@@ -460,16 +496,10 @@ tr.row-status-none     { background: transparent; }
     vertical-align: middle;
   }
   .med-table td.combo .combo-stack {
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
-    width: auto;
+    gap: 10px;
     vertical-align: middle;
   }
-  .med-table td.combo .counter { font-size: 18px; }
-  .med-table td.combo .action-cluster { flex: 0 0 auto; gap: 6px; }
+  .med-table td.combo .counter-btn { font-size: 18px; height: 40px; }
 
   /* Put the two timing cells side-by-side instead of stacked. */
   .med-table td[data-label="First in cycle"],

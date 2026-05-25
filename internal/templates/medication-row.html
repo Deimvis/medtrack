@@ -15,54 +15,50 @@
 
   <td data-label="Dose" class="combo combo-dose">
     <div class="combo-stack">
-      <span class="counter">
-        {{$m.UsedInCycle}}{{if $m.PerCycleLabel}}/{{$m.PerCycleLabel}}{{end}}
-        {{if $m.IntervalWarning}}<span class="interval-warning" title="{{$m.IntervalWarning}}">⚠</span>{{end}}
-      </span>
-      <div class="action-cluster">
-        <button class="btn btn-up"
-                hx-post="{{$bp}}/medications/{{$m.ID}}/dose"
-                hx-target="#row-{{$m.ID}}"
-                hx-swap="outerHTML"
-                aria-label="Record one dose"
-                title="Record one dose">⬆</button>
-        <details class="menu">
-          <summary aria-label="More dose actions">⋮</summary>
-          <div class="menu-list">
-            <button type="button"
-                    hx-post="{{$bp}}/medications/{{$m.ID}}/dose/revert"
-                    hx-target="#row-{{$m.ID}}"
-                    hx-swap="outerHTML">Revert one</button>
-            <a href="{{$bp}}/medications/{{$m.ID}}/log">View log</a>
-          </div>
-        </details>
-      </div>
+      <button class="counter-btn"
+              hx-post="{{$bp}}/medications/{{$m.ID}}/dose"
+              hx-target="#row-{{$m.ID}}"
+              hx-swap="outerHTML"
+              aria-label="Record one dose"
+              title="Record one dose">
+        <span class="counter-value">{{$m.UsedInCycle}}{{if $m.PerCycleLabel}}/{{$m.PerCycleLabel}}{{end}}</span>
+        <span class="counter-arrow" aria-hidden="true">⬆</span>
+      </button>
+      {{if $m.IntervalWarning}}<span class="interval-warning" title="{{$m.IntervalWarning}}">⚠</span>{{end}}
+      <details class="menu">
+        <summary aria-label="More dose actions">⋮</summary>
+        <div class="menu-list">
+          <button type="button"
+                  hx-post="{{$bp}}/medications/{{$m.ID}}/dose/revert"
+                  hx-target="#row-{{$m.ID}}"
+                  hx-swap="outerHTML">Revert one</button>
+          <a href="{{$bp}}/medications/{{$m.ID}}/log">View log</a>
+        </div>
+      </details>
     </div>
   </td>
 
   <td data-label="Cycle" class="combo combo-cycle">
     <div class="combo-stack">
-      <span class="counter">
-        {{$m.CycleIndex}}{{if $m.CyclesTotalLabel}}/{{$m.CyclesTotalLabel}}{{end}}
-        {{if $m.CycleLabel}}<span class="muted small">· {{$m.CycleLabel}}</span>{{end}}
-      </span>
-      <div class="action-cluster">
-        <button class="btn btn-cycle"
-                hx-post="{{$bp}}/medications/{{$m.ID}}/cycle"
-                hx-target="#row-{{$m.ID}}"
-                hx-swap="outerHTML"
-                aria-label="Advance to next cycle"
-                title="Advance to next cycle">⬆</button>
-        <details class="menu">
-          <summary aria-label="More cycle actions">⋮</summary>
-          <div class="menu-list">
-            <button type="button"
-                    hx-post="{{$bp}}/medications/{{$m.ID}}/cycle/revert"
-                    hx-target="#row-{{$m.ID}}"
-                    hx-swap="outerHTML">Revert cycle</button>
-          </div>
-        </details>
-      </div>
+      <button class="counter-btn"
+              hx-post="{{$bp}}/medications/{{$m.ID}}/cycle"
+              hx-target="#row-{{$m.ID}}"
+              hx-swap="outerHTML"
+              aria-label="Advance to next cycle"
+              title="Advance to next cycle">
+        <span class="counter-value">{{$m.CycleIndex}}{{if $m.CyclesTotalLabel}}/{{$m.CyclesTotalLabel}}{{end}}</span>
+        <span class="counter-arrow" aria-hidden="true">⬆</span>
+      </button>
+      {{if $m.CycleLabel}}<span class="muted small">· {{$m.CycleLabel}}</span>{{end}}
+      <details class="menu">
+        <summary aria-label="More cycle actions">⋮</summary>
+        <div class="menu-list">
+          <button type="button"
+                  hx-post="{{$bp}}/medications/{{$m.ID}}/cycle/revert"
+                  hx-target="#row-{{$m.ID}}"
+                  hx-swap="outerHTML">Revert cycle</button>
+        </div>
+      </details>
     </div>
   </td>
 
