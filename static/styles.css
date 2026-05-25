@@ -239,6 +239,13 @@ html, body {
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
+.med-table th:first-child,
+.med-table td:first-child { padding-left: 20px; }
+.med-table th:last-child,
+.med-table td:last-child  { padding-right: 10px; }
+/* Keep the Actions column tight so the buttons sit closer to the right edge. */
+.med-table th:last-child,
+.med-table td:last-child  { width: 1%; white-space: nowrap; }
 .med-table thead th {
   background: #f0f3f8;
   font-size: 12px;
