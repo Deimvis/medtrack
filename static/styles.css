@@ -337,6 +337,16 @@ tr.row-status-none     { background: transparent; }
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
+.form-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.form-row {
+  display: flex;
+  gap: 14px;
+}
+.form-row > .field { flex: 1 1 0; min-width: 0; }
 .field {
   display: flex;
   flex-direction: column;
@@ -442,6 +452,7 @@ tr.row-status-none     { background: transparent; }
   .container { padding: 12px 10px 48px; }
   .page-header h1 { font-size: 18px; }
   .field.span-2 { grid-column: span 1; }
+  .form-row { flex-direction: column; }
 
   /* ── Medication card ──────────────────────────────── */
   .med-table,

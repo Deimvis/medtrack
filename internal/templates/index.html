@@ -47,50 +47,56 @@
           hx-target="#med-table"
           hx-swap="outerHTML"
           hx-on::after-request="if(event.detail.successful){ this.reset(); document.getElementById('cycleValue').value=1; document.getElementById('cycleUnit').value='day'; document.getElementById('add-warning').textContent=''; }">
-      <div class="field-grid">
-        <label class="field span-2">
-          <span>Name *</span>
-          <input name="name" required autocomplete="off">
-        </label>
+      <div class="form-rows">
+        <div class="form-row">
+          <label class="field">
+            <span>Name *</span>
+            <input name="name" required autocomplete="off">
+          </label>
+        </div>
 
-        <fieldset class="field">
-          <legend>Per cycle</legend>
-          <div class="row">
-            <input type="number" min="0" name="perCycleMin" placeholder="min">
-            <span>–</span>
-            <input type="number" min="0" name="perCycleMax" placeholder="max">
-          </div>
-        </fieldset>
+        <div class="form-row">
+          <fieldset class="field">
+            <legend>Doses per cycle</legend>
+            <div class="row">
+              <input type="number" min="0" name="perCycleMin" placeholder="min count">
+              <span>–</span>
+              <input type="number" min="0" name="perCycleMax" placeholder="max count">
+            </div>
+          </fieldset>
 
-        <fieldset class="field">
-          <legend>Cycle</legend>
-          <div class="row">
-            <input type="number" min="0" step="any" id="cycleValue" name="cycleValue" value="1">
-            <select id="cycleUnit" name="cycleUnit">
-              <option value="hour">hour(s)</option>
-              <option value="day" selected>day(s)</option>
-              <option value="week">week(s)</option>
-            </select>
-          </div>
-        </fieldset>
+          <fieldset class="field">
+            <legend>Dose interval (hours)</legend>
+            <div class="row">
+              <input type="number" min="0" step="any" name="intervalMin" placeholder="min hours">
+              <span>–</span>
+              <input type="number" min="0" step="any" name="intervalMax" placeholder="max hours">
+            </div>
+          </fieldset>
+        </div>
 
-        <fieldset class="field">
-          <legend>Cycles total</legend>
-          <div class="row">
-            <input type="number" min="0" name="cyclesTotalMin" placeholder="min">
-            <span>–</span>
-            <input type="number" min="0" name="cyclesTotalMax" placeholder="max">
-          </div>
-        </fieldset>
+        <div class="form-row">
+          <fieldset class="field">
+            <legend>Cycle duration</legend>
+            <div class="row">
+              <input type="number" min="0" step="any" id="cycleValue" name="cycleValue" value="1">
+              <select id="cycleUnit" name="cycleUnit">
+                <option value="hour">hour(s)</option>
+                <option value="day" selected>day(s)</option>
+                <option value="week">week(s)</option>
+              </select>
+            </div>
+          </fieldset>
 
-        <fieldset class="field">
-          <legend>Interval between doses (hours)</legend>
-          <div class="row">
-            <input type="number" min="0" step="any" name="intervalMin" placeholder="X">
-            <span>–</span>
-            <input type="number" min="0" step="any" name="intervalMax" placeholder="Y">
-          </div>
-        </fieldset>
+          <fieldset class="field">
+            <legend>Cycles</legend>
+            <div class="row">
+              <input type="number" min="0" name="cyclesTotalMin" placeholder="min count">
+              <span>–</span>
+              <input type="number" min="0" name="cyclesTotalMax" placeholder="max count">
+            </div>
+          </fieldset>
+        </div>
       </div>
 
       <p id="add-warning" class="interval-warning-inline" role="status"></p>
