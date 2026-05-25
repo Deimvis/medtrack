@@ -1,0 +1,77 @@
+{{define "temperature.html"}}
+{{$bp := .BasePath}}
+{{$data := .Data}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Temperature — {{$data.DiaryName}}</title>
+  <link rel="icon" href="{{$bp}}/static/favicon.svg">
+  <link rel="stylesheet" href="{{$bp}}/static/styles.css">
+</head>
+<body>
+<main class="container">
+  <header class="page-header">
+    <h1>Temperature</h1>
+    <nav class="header-actions">
+      <a href="{{$bp}}/" class="btn ghost">← Back to diary</a>
+      <a href="{{$bp}}/log" class="btn ghost">Event Log</a>
+    </nav>
+  </header>
+
+  <section class="add-section">
+    <form method="POST" action="{{$bp}}/temperature">
+      <div class="form-rows">
+        <div class="form-row">
+          <label class="field">
+            <span>Value °C *</span>
+            <input type="text"
+                   inputmode="decimal"
+                   pattern="\d{1,2}([.,\s]\d{1,2})?"
+                   name="valueC" required placeholder="e.g. 37.4 or 37,4 or 37 4"
+                   autocomplete="off">
+          </label>
+          <label class="field">
+            <span>When</span>
+            <input type="datetime-local" name="at" value="{{$data.DefaultLocal}}">
+          </label>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Record temperature</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-wrap">
+    <h2 class="section-title">Past readings</h2>
+    {{if eq (len $data.Readings) 0}}
+      <p class="muted">No readings yet.</p>
+    {{else}}
+    <table class="event-table">
+      <thead>
+        <tr><th>When</th><th>Temperature</th><th></th></tr>
+      </thead>
+      <tbody>
+        {{range $data.Readings}}
+        <tr>
+          <td data-label="When">{{.AtFormatted}}</td>
+          <td data-label="Temperature" class="num">{{printf "%.1f" .ValueC}} °C</td>
+          <td data-label="Delete" class="actions">
+            <form method="POST" action="{{$bp}}/temperature/{{.ID}}/delete" style="display:inline">
+              <button class="btn btn-danger ghost"
+                      onclick="return confirm('Delete this temperature reading?')"
+                      aria-label="Delete reading"><span class="icon-x" aria-hidden="true">×</span></button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{end}}
+  </section>
+</main>
+</body>
+</html>
+{{end}}

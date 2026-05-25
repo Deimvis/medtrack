@@ -25,9 +25,24 @@ func NewHandler(basePath string) *Handler {
 	projectRoot := filepath.Join(filepath.Dir(filename), "../..")
 	templatePath := filepath.Join(projectRoot, "internal/templates/*.html")
 
+	toFloat := func(v interface{}) float64 {
+		switch x := v.(type) {
+		case float64:
+			return x
+		case float32:
+			return float64(x)
+		case int:
+			return float64(x)
+		case int64:
+			return float64(x)
+		case int32:
+			return float64(x)
+		}
+		return 0
+	}
 	funcMap := template.FuncMap{
-		"add": func(a, b int) int { return a + b },
-		"sub": func(a, b int) int { return a - b },
+		"add": func(a, b interface{}) float64 { return toFloat(a) + toFloat(b) },
+		"sub": func(a, b interface{}) float64 { return toFloat(a) - toFloat(b) },
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
 			if len(values)%2 != 0 {
 				return nil, fmt.Errorf("dict: odd number of arguments")
@@ -81,6 +96,12 @@ type MedicationView struct {
 	IntervalWarning  string // non-empty when the config is inconsistent
 }
 
+// EventViewType is a string covering both medication EventType values and
+// the synthetic "temperature" kind used by the log view.
+type EventViewType string
+
+const EventViewTemperature EventViewType = "temperature"
+
 // EventView is the rendered form of one event for the log page.
 type EventView struct {
 	MedicationID   string
@@ -88,11 +109,12 @@ type EventView struct {
 	MedicationDel  bool // true when the source medication has been deleted
 	At             time.Time
 	AtFormatted    string
-	Type           models.EventType
+	Type           EventViewType
 	TypeLabel      string
 	CycleIndex     int
 	TakingAt       *time.Time
 	TakingFmt      string
+	TemperatureC   float64
 }
 
 // IndexData is the data shape for index.html.
@@ -109,6 +131,7 @@ type LogData struct {
 	FilterMedName  string // when filtered to one medication, its name
 	FilterDeleted  bool   // true when the filtered medication has been deleted
 	AllMedications []models.Medication
+	Chart          ChartData
 }
 
 // buildMedicationView assembles the view-model for a single medication.
@@ -264,10 +287,11 @@ func eventTypeLabel(t models.EventType) string {
 	}
 }
 
-// buildEventViews flattens events from one or all medications into a single
-// chronological list (newest first). IDs in deletedIDs are flagged so the
-// log template can mark them as deleted.
-func (h *Handler) buildEventViews(meds []models.Medication, filterID string, deletedIDs map[string]bool, now time.Time) []EventView {
+// buildEventViews flattens events from one or all medications (and optional
+// temperature readings) into a single chronological list (newest first).
+// IDs in deletedIDs are flagged so the log template can mark them as deleted.
+// Temperature readings are skipped when filterID is non-empty (the per-med log).
+func (h *Handler) buildEventViews(meds []models.Medication, filterID string, deletedIDs map[string]bool, temps []models.TemperatureEvent, now time.Time) []EventView {
 	var out []EventView
 	for _, m := range meds {
 		if filterID != "" && m.ID != filterID {
@@ -281,7 +305,7 @@ func (h *Handler) buildEventViews(meds []models.Medication, filterID string, del
 				MedicationDel:  isDel,
 				At:             e.At,
 				AtFormatted:    e.At.Local().Format("2006-01-02 15:04:05"),
-				Type:           e.Type,
+				Type:           EventViewType(e.Type),
 				TypeLabel:      eventTypeLabel(e.Type),
 				CycleIndex:     e.CycleIndex,
 				TakingAt:       e.TakingAt,
@@ -290,6 +314,17 @@ func (h *Handler) buildEventViews(meds []models.Medication, filterID string, del
 				ev.TakingFmt = formatTakingTimestamp(*e.TakingAt, now)
 			}
 			out = append(out, ev)
+		}
+	}
+	if filterID == "" {
+		for _, t := range temps {
+			out = append(out, EventView{
+				At:           t.At,
+				AtFormatted:  t.At.Local().Format("2006-01-02 15:04:05"),
+				Type:         EventViewTemperature,
+				TypeLabel:    "Temperature",
+				TemperatureC: t.ValueC,
+			})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].At.After(out[j].At) })

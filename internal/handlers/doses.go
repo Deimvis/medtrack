@@ -92,7 +92,7 @@ func (h *Handler) MedicationLog(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	events := h.buildEventViews(all, id, deletedIDs, h.now())
+	events := h.buildEventViews(all, id, deletedIDs, diary.Temperatures, h.now())
 	if err := h.renderTemplate(w, "log.html", LogData{
 		DiaryName:      diary.Name,
 		Events:         events,
@@ -116,11 +116,13 @@ func (h *Handler) Log(w http.ResponseWriter, r *http.Request) {
 		deletedIDs[m.ID] = true
 	}
 	all := append(append([]models.Medication{}, diary.Medications...), deletedMeds...)
-	events := h.buildEventViews(all, "", deletedIDs, h.now())
+	events := h.buildEventViews(all, "", deletedIDs, diary.Temperatures, h.now())
+	chart := h.buildTemperatureChart(diary.Temperatures, all, deletedIDs)
 	if err := h.renderTemplate(w, "log.html", LogData{
 		DiaryName:      diary.Name,
 		Events:         events,
 		AllMedications: all,
+		Chart:          chart,
 	}); err != nil {
 		log.Printf("log render: %v", err)
 		http.Error(w, "render error", http.StatusInternalServerError)

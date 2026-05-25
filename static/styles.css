@@ -63,6 +63,51 @@ html, body {
   gap: 8px;
 }
 
+/* ─── Primary navigation (Temperature, Event Log) ───────── */
+.primary-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: -6px 0 18px;
+}
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.03);
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s, transform 0.06s;
+}
+.nav-btn:hover {
+  background: #f4f7fb;
+  border-color: #c7cfdc;
+  color: var(--primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.nav-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+.nav-btn-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+  flex: 0 0 auto;
+}
+@media (max-width: 699px) {
+  .primary-nav { justify-content: stretch; }
+  .nav-btn { flex: 1 1 0; justify-content: center; }
+}
+
 /* ─── Buttons ────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
@@ -448,6 +493,50 @@ tr.row-status-none     { background: transparent; }
 .event-type.event-dose_revert { background: #ffe6e6; color: var(--danger); }
 .event-type.event-cycle_advance { background: #e3edff; color: var(--primary); }
 .event-type.event-cycle_revert { background: #fff4d6; color: var(--warn); }
+
+/* ─── Temperature chart ──────────────────────────────────── */
+.chart-section {
+  margin-bottom: 20px;
+}
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px 8px;
+}
+.temp-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chart-legend {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chart-legend .swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.section-title {
+  margin: 18px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.event-type.event-temperature { background: #ffe7e7; color: #b91c1c; }
 
 .badge-deleted {
   display: inline-block;

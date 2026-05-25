@@ -138,10 +138,18 @@ func (m *Medication) PopTaking() (time.Time, bool) {
 	return last, true
 }
 
+// TemperatureEvent is one body-temperature reading.
+type TemperatureEvent struct {
+	ID     string    `json:"id"`
+	At     time.Time `json:"at"`
+	ValueC float64   `json:"valueC"`
+}
+
 // Diary is the top-level container holding all medications.
 // DeletedMedications keeps the audit trail for medications the user removed.
 type Diary struct {
-	Name               string       `json:"name"`
-	Medications        []Medication `json:"medications"`
-	DeletedMedications []Medication `json:"deletedMedications,omitempty"`
+	Name               string             `json:"name"`
+	Medications        []Medication       `json:"medications"`
+	DeletedMedications []Medication       `json:"deletedMedications,omitempty"`
+	Temperatures       []TemperatureEvent `json:"temperatures,omitempty"`
 }

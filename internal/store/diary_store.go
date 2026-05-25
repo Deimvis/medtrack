@@ -117,6 +117,32 @@ func (s *DiaryStore) DeletedMedications() []models.Medication {
 	return out
 }
 
+// AddTemperature records a body-temperature reading. Returns the created entry.
+func (s *DiaryStore) AddTemperature(at time.Time, valueC float64) models.TemperatureEvent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	t := models.TemperatureEvent{
+		ID:     shortuuid.New(),
+		At:     at,
+		ValueC: valueC,
+	}
+	s.diary.Temperatures = append(s.diary.Temperatures, t)
+	return t
+}
+
+// DeleteTemperature removes a temperature reading by ID.
+func (s *DiaryStore) DeleteTemperature(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.diary.Temperatures {
+		if s.diary.Temperatures[i].ID == id {
+			s.diary.Temperatures = append(s.diary.Temperatures[:i], s.diary.Temperatures[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
 func (s *DiaryStore) findIndex(id string) int {
 	for i := range s.diary.Medications {
 		if s.diary.Medications[i].ID == id {
@@ -210,7 +236,7 @@ func (s *DiaryStore) RevertCycle(id string, now time.Time) (models.Medication, b
 }
 
 // ResetProgress clears every medication's live state, keeping configuration.
-// Soft-deleted medications are also wiped — they exist only for their history.
+// Soft-deleted medications and temperature readings are also wiped.
 func (s *DiaryStore) ResetProgress() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -221,6 +247,7 @@ func (s *DiaryStore) ResetProgress() {
 		m.Events = []models.Event{}
 	}
 	s.diary.DeletedMedications = nil
+	s.diary.Temperatures = nil
 }
 
 // Clear wipes the diary entirely.
@@ -244,6 +271,10 @@ func deepCopyDiary(d models.Diary) models.Diary {
 		for i := range d.DeletedMedications {
 			out.DeletedMedications[i] = deepCopyMed(d.DeletedMedications[i])
 		}
+	}
+	if len(d.Temperatures) > 0 {
+		out.Temperatures = make([]models.TemperatureEvent, len(d.Temperatures))
+		copy(out.Temperatures, d.Temperatures)
 	}
 	return out
 }
