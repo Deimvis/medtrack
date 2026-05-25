@@ -49,38 +49,58 @@ func (h *Handler) ListMedications(w http.ResponseWriter, r *http.Request) {
 
 // medicationFromForm parses the create/update form into a Medication.
 func medicationFromForm(r *http.Request) models.Medication {
-	parseInt := func(s string) int {
-		n, _ := strconv.Atoi(strings.TrimSpace(s))
-		return n
+	// optInt returns (value, present). An empty field reports present=false
+	// so we can distinguish "not filled" from an explicit "0".
+	optInt := func(key string) (int, bool) {
+		raw := strings.TrimSpace(r.FormValue(key))
+		if raw == "" {
+			return 0, false
+		}
+		n, err := strconv.Atoi(raw)
+		if err != nil {
+			return 0, false
+		}
+		return n, true
 	}
-	parseFloat := func(s string) float64 {
-		f, _ := strconv.ParseFloat(strings.TrimSpace(s), 64)
-		return f
+	optFloat := func(key string) (float64, bool) {
+		raw := strings.TrimSpace(r.FormValue(key))
+		if raw == "" {
+			return 0, false
+		}
+		f, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			return 0, false
+		}
+		return f, true
 	}
 	rangeFromForm := func(minKey, maxKey string) models.RangeInt {
-		minV := parseInt(r.FormValue(minKey))
-		maxV := parseInt(r.FormValue(maxKey))
-		if minV == 0 && maxV != 0 {
-			minV = maxV
+		minV, minOK := optInt(minKey)
+		maxV, maxOK := optInt(maxKey)
+		switch {
+		case !minOK && !maxOK:
+			return models.RangeInt{}
+		case minOK && !maxOK:
+			return models.RangeInt{Min: minV, Max: minV}
+		case !minOK && maxOK:
+			return models.RangeInt{Min: maxV, Max: maxV}
+		default:
+			return models.RangeInt{Min: minV, Max: maxV}
 		}
-		if maxV == 0 && minV != 0 {
-			maxV = minV
-		}
-		return models.RangeInt{Min: minV, Max: maxV}
 	}
+
+	cycleVal, _ := optFloat("cycleValue")
+	intervalMin, _ := optFloat("intervalMin")
+	intervalMax, _ := optFloat("intervalMax")
 
 	m := models.Medication{
 		Name:     strings.TrimSpace(r.FormValue("name")),
 		PerCycle: rangeFromForm("perCycleMin", "perCycleMax"),
 		CycleDuration: models.CycleDuration{
-			Value: parseFloat(r.FormValue("cycleValue")),
+			Value: cycleVal,
 			Unit:  strings.TrimSpace(r.FormValue("cycleUnit")),
 		},
 		CyclesTotal: rangeFromForm("cyclesTotalMin", "cyclesTotalMax"),
-		Interval: intervalFromForm(
-			parseFloat(r.FormValue("intervalMin")),
-			parseFloat(r.FormValue("intervalMax")),
-		),
+		Interval:    intervalFromForm(intervalMin, intervalMax),
 	}
 	if m.CycleDuration.Value > 0 && m.CycleDuration.Unit == "" {
 		m.CycleDuration.Unit = "day"
@@ -88,18 +108,31 @@ func medicationFromForm(r *http.Request) models.Medication {
 	return m
 }
 
-// intervalFromForm collapses a "range" interval into a fixed value when the
-// user supplied only one of the two endpoints. If both are non-zero it keeps
-// them as-is; if only one is set, the other mirrors it; if both are zero, the
-// interval is treated as not configured.
+// intervalFromForm normalises an interval. Only the min-hours endpoint can be
+// supplied alone (meaning "no upper bound" — no late state). Supplying only
+// the max-hours endpoint is not allowed; that combination is rejected by the
+// caller. If both are zero, the interval is treated as not configured.
 func intervalFromForm(minH, maxH float64) models.IntervalHours {
-	if minH == 0 && maxH != 0 {
-		minH = maxH
-	}
-	if maxH == 0 && minH != 0 {
-		maxH = minH
-	}
 	return models.IntervalHours{MinHours: minH, MaxHours: maxH}
+}
+
+// validateMedication returns a user-readable error if the medication form
+// values are inconsistent, or "" when everything is fine. It inspects the
+// raw request so it can tell "0" apart from "field left blank".
+func validateMedication(r *http.Request, m models.Medication) string {
+	if m.Name == "" {
+		return "name is required"
+	}
+	minRaw := strings.TrimSpace(r.FormValue("intervalMin"))
+	maxRaw := strings.TrimSpace(r.FormValue("intervalMax"))
+	// Dose interval: only-max is not allowed (the user has to set the lower
+	// bound — an upper bound on its own has no meaning here). Note that an
+	// explicit "0" counts as a valid lower bound.
+	if minRaw == "" && maxRaw != "" {
+		return "Dose interval: please set the lower bound (min hours). " +
+			"Specifying only the upper bound is not allowed."
+	}
+	return ""
 }
 
 // CreateMedication handles POST /medications.
@@ -113,8 +146,8 @@ func (h *Handler) CreateMedication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m := medicationFromForm(r)
-	if m.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+	if msg := validateMedication(r, m); msg != "" {
+		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 	s := storeFromContext(r)
@@ -140,8 +173,8 @@ func (h *Handler) UpdateMedication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m := medicationFromForm(r)
-	if m.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+	if msg := validateMedication(r, m); msg != "" {
+		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
 	s := storeFromContext(r)
@@ -191,7 +224,13 @@ func (h *Handler) UpdateDiaryName(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		// Refuse to clear the title — keep the previous value.
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	s := storeFromContext(r)
-	s.SetName(r.FormValue("name"))
+	s.SetName(name)
 	w.WriteHeader(http.StatusNoContent)
 }

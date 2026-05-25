@@ -16,7 +16,7 @@
 <main class="container">
   <header class="page-header">
     <h1 id="diary-title" contenteditable="true"
-        spellcheck="false">{{$data.DiaryName}}</h1>
+        spellcheck="false">{{if $data.DiaryName}}{{$data.DiaryName}}{{else}}My medications{{end}}</h1>
     <nav class="header-actions">
       <a href="{{$bp}}/export.json" class="btn ghost" download>Export</a>
       <label class="btn ghost">
@@ -150,7 +150,15 @@
     var perMax = parseFloat(form.elements['perCycleMax'].value) || parseFloat(form.elements['perCycleMin'].value) || 0;
     var cycleValue = parseFloat(form.elements['cycleValue'].value) || 0;
     var cycleHours = cycleValue > 0 ? cycleValue * unitHours(form.elements['cycleUnit'].value) : 24;
-    var intervalMin = parseFloat(form.elements['intervalMin'].value) || 0;
+    var intervalMinRaw = form.elements['intervalMin'].value.trim();
+    var intervalMaxRaw = form.elements['intervalMax'].value.trim();
+    var intervalMin = parseFloat(intervalMinRaw) || 0;
+    // Reject "only max" configurations — the lower bound is required.
+    // An explicit "0" in the min field counts as a valid lower bound.
+    if (intervalMinRaw === '' && intervalMaxRaw !== '') {
+      warningEl.textContent = '⚠ Dose interval: please set the lower bound (min hours). Specifying only the upper bound is not allowed.';
+      return;
+    }
     if (perMax > 0 && intervalMin > 0) {
       var fit = cycleHours / intervalMin;
       if (fit < perMax) {
@@ -163,15 +171,47 @@
   form.addEventListener('input', checkIntervalWarning);
   form.addEventListener('change', checkIntervalWarning);
 
-  // Diary title (contenteditable) — POST on blur.
+  // Diary title (contenteditable) — POST on blur, but only when the value
+  // actually changed and the new value isn't empty (an empty title would
+  // otherwise wipe the name on the server).
   var titleEl = document.getElementById('diary-title');
+  var titleInitial = titleEl.textContent.trim();
+  titleEl.addEventListener('focus', function(){
+    titleInitial = titleEl.textContent.trim();
+  });
   titleEl.addEventListener('blur', function(){
+    var current = titleEl.textContent.trim();
+    if (current === '') {
+      // Refuse to commit empty — restore the previous value visually.
+      titleEl.textContent = titleInitial;
+      return;
+    }
+    if (current === titleInitial) return;
+
+    // Patch the local snapshot's name synchronously so a fast refresh
+    // before the server fetch lands still survives — the persistence flow
+    // will then read this name back from localStorage.
+    try {
+      var raw = localStorage.getItem('medtrackState');
+      var parsed = raw ? JSON.parse(raw) : { version: 1, data: { medications: [] } };
+      if (!parsed.data) parsed.data = { medications: [] };
+      parsed.data.name = current;
+      localStorage.setItem('medtrackState', JSON.stringify(parsed));
+    } catch (_) {}
+
     var data = new FormData();
-    data.append('name', titleEl.textContent.trim());
-    fetch(BASE + '/diary/name', { method: 'POST', body: data });
+    data.append('name', current);
+    fetch(BASE + '/diary/name', { method: 'POST', body: data })
+      .then(function(){ if (window.medtrackSaveState) window.medtrackSaveState(); });
+    titleInitial = current;
   });
   titleEl.addEventListener('keydown', function(e){
     if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      titleEl.textContent = titleInitial;
+      titleEl.blur();
+    }
   });
 
   // Close any open <details class="menu"> when clicking outside it.

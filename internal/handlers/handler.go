@@ -228,12 +228,20 @@ func computeStatus(m models.Medication, now time.Time) (string, string) {
 	since := now.Sub(last)
 	minDur := time.Duration(m.Interval.MinHours * float64(time.Hour))
 	maxDur := time.Duration(m.Interval.MaxHours * float64(time.Hour))
+	hasUpper := m.Interval.MaxHours > 0
 	intervalLine := fmt.Sprintf("Interval: %s", intervalLabel(m.Interval))
 	switch {
 	case since < minDur:
 		return "early", fmt.Sprintf(
 			"It is early to be used (time left: %s).\n%s",
 			formatDurationShort(minDur-since), intervalLine,
+		)
+	case !hasUpper:
+		// Only the lower bound is configured — past min there is no late
+		// state, the medication is just "ready to take" indefinitely.
+		return "ontime", fmt.Sprintf(
+			"It is right time to be used (no upper bound).\n%s",
+			intervalLine,
 		)
 	case since <= maxDur:
 		return "ontime", fmt.Sprintf(
@@ -328,6 +336,10 @@ func cycleLabel(c models.CycleDuration) string {
 func intervalLabel(i models.IntervalHours) string {
 	if i.IsZero() {
 		return ""
+	}
+	// MaxHours == 0 with MinHours > 0 means "no upper bound" — render as "≥ X h".
+	if i.MaxHours == 0 {
+		return fmt.Sprintf("≥ %g h", i.MinHours)
 	}
 	if i.MinHours == i.MaxHours {
 		return fmt.Sprintf("%g h", i.MinHours)

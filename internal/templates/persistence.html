@@ -10,11 +10,22 @@
   var RESTORE_DISABLED_KEY = 'medtrackRestoreDisabled';
   var STATE_VERSION = 1;
 
+  // The diary's default name (must match server's NewDiaryStore). Anything
+  // other than this counts as "has content" so the title alone is enough to
+  // protect a fresh server from being clobbered by stale localStorage data.
+  var DEFAULT_NAME = 'My medications';
+
   function dataHasContent(data){
     if (!data) return false;
-    return (Array.isArray(data.medications) && data.medications.length > 0) ||
-           (Array.isArray(data.deletedMedications) && data.deletedMedications.length > 0) ||
-           (Array.isArray(data.temperatures) && data.temperatures.length > 0);
+    if ((Array.isArray(data.medications) && data.medications.length > 0) ||
+        (Array.isArray(data.deletedMedications) && data.deletedMedications.length > 0) ||
+        (Array.isArray(data.temperatures) && data.temperatures.length > 0)) {
+      return true;
+    }
+    if (typeof data.name === 'string' && data.name.trim() !== '' && data.name !== DEFAULT_NAME) {
+      return true;
+    }
+    return false;
   }
 
   function saveStateToLocalStorage(){
@@ -22,6 +33,22 @@
       .then(function(res){ if (!res.ok) return; return res.json(); })
       .then(function(data){
         if (!data) return;
+        // Preserve a previously-saved non-default name. If the server still
+        // returns the default name (e.g. the rename POST hasn't been
+        // processed yet, or a race with another write), keep what's already
+        // in localStorage.
+        try {
+          var prevRaw = localStorage.getItem(STATE_KEY);
+          if (prevRaw) {
+            var prev = JSON.parse(prevRaw);
+            var prevName = prev && prev.data && prev.data.name;
+            if (typeof prevName === 'string' && prevName.trim() !== '' && prevName !== DEFAULT_NAME) {
+              if (!data.name || data.name === DEFAULT_NAME) {
+                data.name = prevName;
+              }
+            }
+          }
+        } catch (_) {}
         try { localStorage.setItem(STATE_KEY, JSON.stringify({ version: STATE_VERSION, data: data })); } catch (_) {}
         if (dataHasContent(data)) {
           try { localStorage.removeItem(RESTORE_DISABLED_KEY); } catch (_) {}
@@ -72,10 +99,16 @@
       .then(function(server){
         if (dataHasContent(server)) return; // server already has data; don't overwrite
 
+        // If the server has a non-default name already (e.g. just-renamed
+        // before refresh), keep it; otherwise take the local snapshot's name.
+        var payload = Object.assign({}, parsed.data);
+        if (server && typeof server.name === 'string' && server.name.trim() !== '' && server.name !== DEFAULT_NAME) {
+          payload.name = server.name;
+        }
         return fetch(BASE + '/import.json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(parsed.data)
+          body: JSON.stringify(payload)
         }).then(function(resp){
           if (!resp.ok) throw new Error('import failed');
           window.location.reload();
