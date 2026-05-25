@@ -212,6 +212,18 @@ html, body {
 }
 .btn-danger.ghost:hover { background: #fdecec; border-color: #fdecec; }
 
+/* Completion cell (Focus page only). */
+.completion-cell {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  font-size: 15px;
+}
+.completion-green  { color: #166534; background: rgba(34, 197, 94, 0.18); }
+.completion-yellow { color: #854d0e; background: rgba(234, 179, 8, 0.22); }
+.completion-orange { color: #9a3412; background: rgba(249, 115, 22, 0.22); }
+.completion-red    { color: #991b1b; background: rgba(239, 68, 68, 0.22); }
+
 /* "Actions" cell: edit pen + delete × side by side. */
 .row-actions {
   white-space: nowrap;

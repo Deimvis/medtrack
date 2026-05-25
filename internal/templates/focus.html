@@ -21,7 +21,7 @@
   </header>
 
   <section class="table-wrap">
-    {{template "medication-table.html" (dict "Data" (dict "Medications" $data.Medications) "BasePath" $bp)}}
+    {{template "medication-table.html" (dict "Data" (dict "Medications" $data.Medications) "BasePath" $bp "Mode" "focus")}}
   </section>
 
   <h2 class="section-title">Record temperature</h2>

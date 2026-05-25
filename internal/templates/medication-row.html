@@ -1,6 +1,8 @@
 {{define "medication-row.html"}}
 {{$m := .Data}}
 {{$bp := .BasePath}}
+{{$mode := .Mode}}
+{{$q := ""}}{{if eq $mode "focus"}}{{$q = "?mode=focus"}}{{end}}
 <tr id="row-{{$m.ID}}" class="row-status-{{$m.Status}}">
   <td data-label="Name">
     <span class="med-name">{{$m.Name}}</span>
@@ -9,7 +11,7 @@
   <td data-label="Doses taken" class="combo combo-dose">
     <div class="combo-stack">
       <button class="counter-btn"
-              hx-post="{{$bp}}/medications/{{$m.ID}}/dose"
+              hx-post="{{$bp}}/medications/{{$m.ID}}/dose{{$q}}"
               hx-target="#row-{{$m.ID}}"
               hx-swap="outerHTML"
               aria-label="Record one dose"
@@ -22,7 +24,7 @@
         <summary aria-label="More dose actions">⋮</summary>
         <div class="menu-list">
           <button type="button"
-                  hx-post="{{$bp}}/medications/{{$m.ID}}/dose/revert"
+                  hx-post="{{$bp}}/medications/{{$m.ID}}/dose/revert{{$q}}"
                   hx-target="#row-{{$m.ID}}"
                   hx-swap="outerHTML">Revert one</button>
           <a href="{{$bp}}/medications/{{$m.ID}}/log">View log</a>
@@ -34,7 +36,7 @@
   <td data-label="Cycles passed" class="combo combo-cycle">
     <div class="combo-stack">
       <button class="counter-btn"
-              hx-post="{{$bp}}/medications/{{$m.ID}}/cycle"
+              hx-post="{{$bp}}/medications/{{$m.ID}}/cycle{{$q}}"
               hx-target="#row-{{$m.ID}}"
               hx-swap="outerHTML"
               aria-label="Advance to next cycle"
@@ -47,7 +49,7 @@
         <summary aria-label="More cycle actions">⋮</summary>
         <div class="menu-list">
           <button type="button"
-                  hx-post="{{$bp}}/medications/{{$m.ID}}/cycle/revert"
+                  hx-post="{{$bp}}/medications/{{$m.ID}}/cycle/revert{{$q}}"
                   hx-target="#row-{{$m.ID}}"
                   hx-swap="outerHTML">Revert cycle</button>
         </div>
@@ -58,6 +60,11 @@
   <td data-label="First in cycle">{{if $m.FirstInCycle}}{{$m.FirstInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
   <td data-label="Last in cycle">{{if $m.LastInCycle}}{{$m.LastInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
 
+  {{if eq $mode "focus"}}
+  <td data-label="Completion" class="completion-cell{{if $m.CompletionColor}} completion-{{$m.CompletionColor}}{{end}}">
+    {{if $m.CompletionAvailable}}{{$m.CompletionPct}}%{{else}}<span class="muted">—</span>{{end}}
+  </td>
+  {{else}}
   <td data-label="Actions" class="actions row-actions">
     <a class="edit-link" href="{{$bp}}/medications/{{$m.ID}}/edit" title="Edit" aria-label="Edit medication">
       <svg class="icon-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -71,5 +78,6 @@
             aria-label="Delete medication"
             hx-confirm="Delete {{$m.Name}}? It will be removed from the diary; its event log is kept and remains visible on the Log page."><span class="icon-x" aria-hidden="true">×</span></button>
   </td>
+  {{end}}
 </tr>
 {{end}}

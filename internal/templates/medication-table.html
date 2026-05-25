@@ -1,6 +1,7 @@
 {{define "medication-table.html"}}
 {{$bp := .BasePath}}
 {{$data := .Data}}
+{{$mode := .Mode}}
 <table id="med-table" class="med-table">
   <thead>
     <tr>
@@ -9,7 +10,11 @@
       <th>Cycles passed</th>
       <th>First in cycle</th>
       <th>Last in cycle</th>
+      {{if eq $mode "focus"}}
+      <th>Completion</th>
+      {{else}}
       <th>Actions</th>
+      {{end}}
     </tr>
   </thead>
   <tbody>
@@ -17,7 +22,7 @@
     <tr class="empty"><td colspan="6">No medications yet — add one below.</td></tr>
     {{else}}
       {{range $data.Medications}}
-        {{template "medication-row.html" (dict "Data" . "BasePath" $bp)}}
+        {{template "medication-row.html" (dict "Data" . "BasePath" $bp "Mode" $mode)}}
       {{end}}
     {{end}}
   </tbody>

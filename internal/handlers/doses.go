@@ -8,14 +8,20 @@ import (
 )
 
 // renderRow renders the medication-row.html partial for a single med id.
+// The page mode ("full" or "focus") is taken from the `?mode=` query param so
+// the row's last cell matches the page the user is viewing.
 func (h *Handler) renderRow(w http.ResponseWriter, r *http.Request, id string) {
+	mode := r.URL.Query().Get("mode")
+	if mode != "focus" {
+		mode = "full"
+	}
 	s := storeFromContext(r)
 	diary := s.Snapshot()
 	now := h.now()
 	for _, m := range diary.Medications {
 		if m.ID == id {
 			view := buildMedicationView(m, now)
-			if err := h.renderTemplate(w, "medication-row.html", view); err != nil {
+			if err := h.renderTemplateMode(w, "medication-row.html", view, mode); err != nil {
 				log.Printf("row render: %v", err)
 				http.Error(w, "render error", http.StatusInternalServerError)
 			}

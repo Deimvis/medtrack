@@ -69,10 +69,19 @@ func NewHandler(basePath string) *Handler {
 func (h *Handler) now() time.Time { return h.NowFunc() }
 
 func (h *Handler) renderTemplate(w http.ResponseWriter, name string, data any) error {
+	return h.renderTemplateMode(w, name, data, "")
+}
+
+// renderTemplateMode is like renderTemplate but also exposes a top-level Mode
+// field used by partials that change shape based on the page context (e.g.
+// medication-table.html on the Focus page renders a Completion column instead
+// of Actions).
+func (h *Handler) renderTemplateMode(w http.ResponseWriter, name string, data any, mode string) error {
 	wrapped := struct {
 		Data     any
 		BasePath string
-	}{Data: data, BasePath: h.basePath}
+		Mode     string
+	}{Data: data, BasePath: h.basePath, Mode: mode}
 
 	var buf bytes.Buffer
 	if err := h.templates.ExecuteTemplate(&buf, name, wrapped); err != nil {
@@ -94,6 +103,13 @@ type MedicationView struct {
 	LastInCycle      string
 	Status           string // early|ontime|late|ready|done|none
 	IntervalWarning  string // non-empty when the config is inconsistent
+
+	// CompletionPct is the average per-cycle adherence as a percentage (0–100),
+	// computed against PerCycle.Min across all cycles up to and including the
+	// current one. CompletionAvailable is false when PerCycle.Min == 0.
+	CompletionPct       int
+	CompletionAvailable bool
+	CompletionColor     string // "green"|"yellow"|"orange"|"red"|"" (no tint when no cycle has passed)
 }
 
 // EventViewType is a string covering both medication EventType values and
@@ -152,6 +168,39 @@ func buildMedicationView(m models.Medication, now time.Time) MedicationView {
 	if len(takings) > 0 {
 		v.FirstInCycle = formatTakingTimestamp(takings[0], now)
 		v.LastInCycle = formatTakingTimestamp(takings[len(takings)-1], now)
+	}
+
+	// Completion: average per-cycle adherence against PerCycle.Min, across all
+	// cycles up to and including the current one. A cycle is "satisfied" when
+	// its takings count >= PerCycle.Min (overflow caps at 100%).
+	if m.PerCycle.Min > 0 {
+		target := float64(m.PerCycle.Min)
+		var sum float64
+		total := m.CycleIndex + 1 // includes current cycle
+		for i := 0; i < total; i++ {
+			used := float64(len(m.TakingsForCycle(i)))
+			pct := used / target * 100
+			if pct > 100 {
+				pct = 100
+			}
+			sum += pct
+		}
+		avg := sum / float64(total)
+		v.CompletionAvailable = true
+		v.CompletionPct = int(avg + 0.5) // round to nearest
+		// Only color once at least one cycle has been completed.
+		if m.CycleIndex > 0 {
+			switch {
+			case v.CompletionPct >= 90:
+				v.CompletionColor = "green"
+			case v.CompletionPct >= 70:
+				v.CompletionColor = "yellow"
+			case v.CompletionPct >= 50:
+				v.CompletionColor = "orange"
+			default:
+				v.CompletionColor = "red"
+			}
+		}
 	}
 	v.Status = computeStatus(m, now)
 	return v
