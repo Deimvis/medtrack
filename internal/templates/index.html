@@ -18,7 +18,7 @@
     <h1 id="diary-title" contenteditable="true"
         spellcheck="false">{{if $data.DiaryName}}{{$data.DiaryName}}{{else}}My medications{{end}}</h1>
     <nav class="header-actions">
-      <a href="{{$bp}}/export.json" class="btn ghost" download>Export</a>
+      <a id="export-link" href="{{$bp}}/export.json" class="btn ghost" download>Export</a>
       <label class="btn ghost">
         Import
         <input id="import-input" type="file" accept="application/json" hidden>
@@ -220,6 +220,35 @@
       if (!d.contains(e.target)) d.removeAttribute('open');
     });
   });
+
+  // Export: build a filename with the visitor's local datetime, then
+  // download the JSON. Server-side filename uses the server's tz which
+  // can confuse users — building it client-side keeps it in their tz.
+  var exportLink = document.getElementById('export-link');
+  if (exportLink) {
+    exportLink.addEventListener('click', function(evt){
+      evt.preventDefault();
+      fetch(BASE + '/export.json', { headers: { 'Accept': 'application/json' } })
+        .then(function(res){ return res.blob().then(function(b){ return { blob: b, headers: res.headers }; }); })
+        .then(function(o){
+          var diaryName = (document.getElementById('diary-title') || {}).textContent || 'diary';
+          diaryName = diaryName.trim().replace(/\s+/g, '_') || 'diary';
+          function pad(n){ return n < 10 ? '0' + n : String(n); }
+          var d = new Date();
+          var ts = d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+
+                   pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
+          var url = URL.createObjectURL(o.blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = diaryName + '_' + ts + '.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        })
+        .catch(function(err){ alert('Export failed: ' + err); });
+    });
+  }
 
   // Import: read JSON and POST it.
   var importInput = document.getElementById('import-input');
