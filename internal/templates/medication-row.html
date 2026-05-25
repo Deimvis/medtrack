@@ -3,8 +3,12 @@
 {{$bp := .BasePath}}
 {{$mode := .Mode}}
 {{$q := ""}}{{if eq $mode "focus"}}{{$q = "?mode=focus"}}{{end}}
-<tr id="row-{{$m.ID}}" class="row-status-{{$m.Status}}">
-  <td data-label="Name">
+<tr id="row-{{$m.ID}}" class="med-row row-status-{{$m.Status}}">
+  <td data-label="Name" class="name-cell">
+    <span class="status-led status-led-{{$m.Status}}"
+          data-tooltip="{{$m.StatusTooltip}}"
+          aria-label="{{$m.StatusTooltip}}"
+          tabindex="0"></span>
     <span class="med-name">{{$m.Name}}</span>
   </td>
 

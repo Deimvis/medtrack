@@ -272,12 +272,89 @@ html, body {
 .med-table td.num { font-variant-numeric: tabular-nums; }
 .med-table td.actions { white-space: nowrap; }
 
-tr.row-status-early    { background: var(--early); }
+/* Row background stays neutral — status is shown via a small LED on the
+   left border instead (see .status-led below). */
+tr.row-status-early,
 tr.row-status-ontime,
-tr.row-status-ready    { background: var(--ontime); }
-tr.row-status-late     { background: var(--late); }
+tr.row-status-ready,
+tr.row-status-late,
 tr.row-status-done,
 tr.row-status-none     { background: transparent; }
+
+/* Status LED — small vertical bar drawn on top of the row's left border. */
+.name-cell { position: relative; }
+.status-led {
+  position: absolute;
+  left: -1px;
+  top: 10%;
+  height: 80%;
+  width: 4px;
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: help;
+  z-index: 2;
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.06);
+  transition: filter 0.12s, transform 0.12s;
+}
+.status-led:hover,
+.status-led:focus-visible {
+  filter: brightness(1.1);
+  transform: scaleX(1.4);
+  outline: none;
+}
+.status-led-ready  { background: #16a34a; box-shadow: 0 0 6px rgba(22,163,74,0.45); }
+.status-led-ontime { background: #16a34a; box-shadow: 0 0 6px rgba(22,163,74,0.45); }
+.status-led-late   { background: #dc2626; box-shadow: 0 0 6px rgba(220,38,38,0.55); }
+.status-led-early  { background: #9ec6c1; box-shadow: 0 0 3px rgba(158,198,193,0.30); }  /* pale, unripe teal */
+.status-led-done   { background: #a855f7; box-shadow: 0 0 5px rgba(168,85,247,0.40); }  /* lilac */
+/* No interval configured — neutral border-grey, no glow. */
+.status-led-none   { background: var(--border); box-shadow: none; }
+
+/* Custom hover/focus tooltip — instant, follows the LED. */
+.status-led::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #f8fafc;
+  font-family: "Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif-condensed, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 30;
+}
+.status-led::before {
+  content: "";
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: #1f2937;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 30;
+}
+.status-led:hover::after,
+.status-led:hover::before,
+.status-led:focus-visible::after,
+.status-led:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
+}
 
 .med-name { font-weight: 600; }
 .edit-link {
@@ -624,10 +701,13 @@ tr.row-status-none     { background: transparent; }
     padding: 4px 0;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
-  .med-table tbody tr.row-status-early    { background: var(--early); }
-  .med-table tbody tr.row-status-ontime,
-  .med-table tbody tr.row-status-ready    { background: var(--ontime); }
-  .med-table tbody tr.row-status-late     { background: var(--late); }
+  /* Mobile cards keep the neutral background too — status is shown via the
+     LED on the card's left edge. */
+  .status-led { left: 0; }
+  .status-led::after {
+    white-space: normal;
+    max-width: 220px;
+  }
 
   /* Default cell: label on top, value below — full width. */
   .med-table td {

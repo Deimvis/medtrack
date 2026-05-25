@@ -102,6 +102,7 @@ type MedicationView struct {
 	FirstInCycle     string
 	LastInCycle      string
 	Status           string // early|ontime|late|ready|done|none
+	StatusTooltip    string // human-readable status sentence used as the LED's tooltip
 	IntervalWarning  string // non-empty when the config is inconsistent
 
 	// CompletionPct is the average per-cycle adherence as a percentage (0–100),
@@ -202,7 +203,7 @@ func buildMedicationView(m models.Medication, now time.Time) MedicationView {
 			}
 		}
 	}
-	v.Status = computeStatus(m, now)
+	v.Status, v.StatusTooltip = computeStatus(m, now)
 	return v
 }
 
@@ -211,27 +212,59 @@ func buildMedicationView(m models.Medication, now time.Time) MedicationView {
 // none: no interval configured and not done.
 // ready: target exists, no prior taking yet.
 // early/ontime/late: based on interval since last taking.
-func computeStatus(m models.Medication, now time.Time) string {
+func computeStatus(m models.Medication, now time.Time) (string, string) {
 	usedInCycle := len(m.TakingsForCurrentCycle())
 	minTarget := m.PerCycle.Min
 	if minTarget > 0 && usedInCycle >= minTarget {
-		return "done"
+		return "done", "Cycle target reached — no more doses needed."
 	}
 	if m.Interval.IsZero() {
-		return "none"
+		return "none", "No interval configured — status unavailable."
 	}
 	last := latestInCurrentOrEarlier(m)
 	if last.IsZero() {
-		return "ready"
+		return "ready", "No dose taken yet — ready to be used."
 	}
-	since := now.Sub(last).Hours()
+	since := now.Sub(last)
+	minDur := time.Duration(m.Interval.MinHours * float64(time.Hour))
+	maxDur := time.Duration(m.Interval.MaxHours * float64(time.Hour))
 	switch {
-	case since < m.Interval.MinHours:
-		return "early"
-	case since <= m.Interval.MaxHours:
-		return "ontime"
+	case since < minDur:
+		return "early", fmt.Sprintf(
+			"It is early to be used (time left: %s).",
+			formatDurationShort(minDur-since),
+		)
+	case since <= maxDur:
+		return "ontime", fmt.Sprintf(
+			"It is right time to be used (time left: %s).",
+			formatDurationShort(maxDur-since),
+		)
 	default:
-		return "late"
+		return "late", fmt.Sprintf(
+			"It is late to be used (overdue by: %s).",
+			formatDurationShort(since-maxDur),
+		)
+	}
+}
+
+// formatDurationShort renders a duration as "Xd YYh", "Xh YYm", or "XXm".
+func formatDurationShort(d time.Duration) string {
+	if d < 0 {
+		d = -d
+	}
+	if d < time.Minute {
+		return "less than 1m"
+	}
+	days := int(d / (24 * time.Hour))
+	hours := int(d % (24 * time.Hour) / time.Hour)
+	minutes := int(d % time.Hour / time.Minute)
+	switch {
+	case days > 0:
+		return fmt.Sprintf("%dd %dh", days, hours)
+	case hours > 0:
+		return fmt.Sprintf("%dh %dm", hours, minutes)
+	default:
+		return fmt.Sprintf("%dm", minutes)
 	}
 }
 
