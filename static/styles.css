@@ -152,8 +152,9 @@ html, body {
   color: var(--danger);
   border-color: transparent;
   background: transparent;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
+  padding-bottom: 4px; /* compensate for × glyph sitting low on the line */
 }
 .btn-danger.ghost:hover { background: #fdecec; border-color: #fdecec; }
 
@@ -210,20 +211,28 @@ tr.row-status-none     { background: transparent; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-left: 8px;
-  border-radius: 6px;
-  font-size: 14px;
+  min-width: 40px;
+  min-height: 40px;
+  margin-left: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 18px;
   line-height: 1;
   color: var(--muted);
   text-decoration: none;
+  background: transparent;
   transition: background-color 0.12s, color 0.12s;
 }
 .edit-link:hover {
   background: #eef2f7;
+  border-color: #eef2f7;
   color: var(--primary);
   text-decoration: none;
+}
+.edit-link .icon-pen {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .muted.small { font-weight: 400; font-size: 12px; }
@@ -491,16 +500,6 @@ tr.row-status-none     { background: transparent; }
   /* Actions cell shows on mobile too — render as a tight right-aligned row. */
   .med-table td[data-label="Actions"] { text-align: right; }
   .med-table td[data-label="Actions"]::before { display: none; }
-  .med-table .row-actions .edit-link {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-  }
-  .med-table .row-actions .btn-danger.ghost {
-    width: 36px;
-    height: 36px;
-    font-size: 22px;
-  }
   .med-table .mobile-delete {
     display: inline-flex;
     align-items: center;

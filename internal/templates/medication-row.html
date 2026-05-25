@@ -59,7 +59,11 @@
   <td data-label="Last in cycle">{{if $m.LastInCycle}}{{$m.LastInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
 
   <td data-label="Actions" class="actions row-actions">
-    <a class="edit-link" href="{{$bp}}/medications/{{$m.ID}}/edit" title="Edit" aria-label="Edit medication">✎</a>
+    <a class="edit-link" href="{{$bp}}/medications/{{$m.ID}}/edit" title="Edit" aria-label="Edit medication">
+      <svg class="icon-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15.6287 5.12132L4.31497 16.435M15.6287 5.12132L19.1642 8.65685M15.6287 5.12132L17.0429 3.70711C17.4334 3.31658 18.0666 3.31658 18.4571 3.70711L20.5784 5.82843C20.969 6.21895 20.969 6.85212 20.5784 7.24264L19.1642 8.65685M7.85051 19.9706L4.31497 16.435M7.85051 19.9706L19.1642 8.65685M7.85051 19.9706L3.25431 21.0312L4.31497 16.435"/>
+      </svg>
+    </a>
     <button class="btn btn-danger ghost"
             hx-delete="{{$bp}}/medications/{{$m.ID}}"
             hx-target="#med-table"
