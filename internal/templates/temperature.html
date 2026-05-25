@@ -35,7 +35,7 @@
       <tbody>
         {{range $data.Readings}}
         <tr>
-          <td data-label="When">{{.AtFormatted}}</td>
+          <td data-label="When"><span data-ts="{{.AtFormatted}}" data-fmt="short">{{.AtFormatted}}</span></td>
           <td data-label="Temperature" class="num">{{printf "%.1f" .ValueC}} °C</td>
           <td data-label="Delete" class="actions">
             <form method="POST" action="{{$bp}}/temperature/{{.ID}}/delete" style="display:inline">
@@ -51,6 +51,7 @@
     {{end}}
   </section>
 </main>
+{{template "tz.html"}}
 {{template "persistence.html" (dict "BasePath" $bp)}}
 </body>
 </html>

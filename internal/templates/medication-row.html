@@ -61,8 +61,8 @@
     </div>
   </td>
 
-  <td data-label="First in cycle">{{if $m.FirstInCycle}}{{$m.FirstInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
-  <td data-label="Last in cycle">{{if $m.LastInCycle}}{{$m.LastInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
+  <td data-label="First in cycle">{{if $m.FirstInCycle}}<span data-ts="{{$m.FirstInCycle}}" data-fmt="rel">{{$m.FirstInCycle}}</span>{{else}}<span class="muted">—</span>{{end}}</td>
+  <td data-label="Last in cycle">{{if $m.LastInCycle}}<span data-ts="{{$m.LastInCycle}}" data-fmt="rel">{{$m.LastInCycle}}</span>{{else}}<span class="muted">—</span>{{end}}</td>
 
   {{if eq $mode "focus"}}
   <td data-label="Completion" class="completion-cell{{if $m.CompletionColor}} completion-{{$m.CompletionColor}}{{end}}">

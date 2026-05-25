@@ -41,21 +41,25 @@ type ChartYTick struct {
 
 type ChartXTick struct {
 	X     float64
-	Label string
+	Label string // legacy/fallback; client replaces this using TS + Format
+	TS    string // RFC3339 absolute time at this tick
+	Fmt   string // hint for the client: "HH:MM" | "MM-DD" | "YYYY-MM"
 }
 
 type ChartPoint struct {
-	X, Y     float64
-	ValueC   float64
-	Tooltip  string
+	X, Y          float64
+	ValueC        float64
+	TooltipPrefix string // e.g. "37.4 °C — " (timestamp appended client-side)
+	TooltipTS     string // RFC3339 timestamp the client formats locally
 }
 
 type ChartMarker struct {
-	X       float64
-	YTop    float64
-	YBottom float64
-	Color   string
-	Tooltip string
+	X             float64
+	YTop          float64
+	YBottom       float64
+	Color         string
+	TooltipPrefix string // e.g. "Aspirin — " (timestamp appended client-side)
+	TooltipTS     string // RFC3339 timestamp the client formats locally
 }
 
 type ChartLegend struct {
@@ -210,10 +214,11 @@ func (h *Handler) buildTemperatureChart(temps []models.TemperatureEvent, meds []
 		px := mapX(t.At)
 		py := mapY(t.ValueC)
 		chart.Points = append(chart.Points, ChartPoint{
-			X:       px,
-			Y:       py,
-			ValueC:  t.ValueC,
-			Tooltip: fmt.Sprintf("%.1f °C — %s", t.ValueC, t.At.Local().Format("2006-01-02 15:04")),
+			X:             px,
+			Y:             py,
+			ValueC:        t.ValueC,
+			TooltipPrefix: fmt.Sprintf("%.1f °C — ", t.ValueC),
+			TooltipTS:     isoTS(t.At),
 		})
 		if i > 0 {
 			poly += " "
@@ -230,11 +235,12 @@ func (h *Handler) buildTemperatureChart(temps []models.TemperatureEvent, meds []
 			label += " (deleted)"
 		}
 		chart.Markers = append(chart.Markers, ChartMarker{
-			X:       dx,
-			YTop:    y1,
-			YBottom: y2,
-			Color:   d.color,
-			Tooltip: fmt.Sprintf("%s — %s", label, d.at.Local().Format("2006-01-02 15:04")),
+			X:             dx,
+			YTop:          y1,
+			YBottom:       y2,
+			Color:         d.color,
+			TooltipPrefix: fmt.Sprintf("%s — ", label),
+			TooltipTS:     isoTS(d.at),
 		})
 	}
 
@@ -276,13 +282,16 @@ func buildTimeTicks(tMin, tMax time.Time, mapX func(time.Time) float64) []ChartX
 		}
 	}
 
-	// Choose label format.
-	format := "15:04"
+	// Choose client-side label format hint.
+	fmtHint := "HH:MM"
+	goFmt := "15:04"
 	if span > 36*time.Hour {
-		format = "01-02"
+		fmtHint = "MM-DD"
+		goFmt = "01-02"
 	}
 	if span > 60*24*time.Hour {
-		format = "2006-01"
+		fmtHint = "YYYY-MM"
+		goFmt = "2006-01"
 	}
 
 	var ticks []ChartXTick
@@ -293,10 +302,20 @@ func buildTimeTicks(tMin, tMax time.Time, mapX func(time.Time) float64) []ChartX
 		t = t.Add(step)
 	}
 	for ; !t.After(tMax); t = t.Add(step) {
-		ticks = append(ticks, ChartXTick{X: mapX(t), Label: t.Local().Format(format)})
+		ticks = append(ticks, ChartXTick{
+			X:     mapX(t),
+			Label: t.UTC().Format(goFmt), // fallback if JS is disabled
+			TS:    isoTS(t),
+			Fmt:   fmtHint,
+		})
 	}
 	if len(ticks) == 0 {
-		ticks = append(ticks, ChartXTick{X: mapX(tMin), Label: tMin.Local().Format(format)})
+		ticks = append(ticks, ChartXTick{
+			X:     mapX(tMin),
+			Label: tMin.UTC().Format(goFmt),
+			TS:    isoTS(tMin),
+			Fmt:   fmtHint,
+		})
 	}
 	return ticks
 }

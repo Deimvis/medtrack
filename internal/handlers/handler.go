@@ -347,26 +347,19 @@ func intervalLabel(i models.IntervalHours) string {
 	return fmt.Sprintf("%g–%g h", i.MinHours, i.MaxHours)
 }
 
-// formatTakingTimestamp formats t relative to now with words today/yesterday.
-func formatTakingTimestamp(t, now time.Time) string {
+// formatTakingTimestamp returns the absolute timestamp in RFC3339 form so
+// the client can render it in the visitor's local timezone. Returns "" for
+// the zero time.
+func formatTakingTimestamp(t, _ time.Time) string { return isoTS(t) }
+
+// isoTS returns t as an RFC3339 string with an explicit offset. We always
+// emit a fully-qualified absolute timestamp so the client can convert it to
+// the user's local timezone unambiguously.
+func isoTS(t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}
-	tLocal := t.Local()
-	nowLocal := now.Local()
-	day := func(x time.Time) time.Time {
-		return time.Date(x.Year(), x.Month(), x.Day(), 0, 0, 0, 0, x.Location())
-	}
-	deltaDays := int(day(nowLocal).Sub(day(tLocal)).Hours() / 24)
-	hhmm := tLocal.Format("15:04")
-	switch deltaDays {
-	case 0:
-		return "today " + hhmm
-	case 1:
-		return "yesterday " + hhmm
-	default:
-		return hhmm + ", " + tLocal.Format("2006-01-02")
-	}
+	return t.Format(time.RFC3339)
 }
 
 // eventTypeLabel returns a human-readable name for an event type.
@@ -402,7 +395,7 @@ func (h *Handler) buildEventViews(meds []models.Medication, filterID string, del
 				MedicationName: m.Name,
 				MedicationDel:  isDel,
 				At:             e.At,
-				AtFormatted:    e.At.Local().Format("2006-01-02 15:04:05"),
+				AtFormatted:    isoTS(e.At),
 				Type:           EventViewType(e.Type),
 				TypeLabel:      eventTypeLabel(e.Type),
 				CycleIndex:     e.CycleIndex,
@@ -419,7 +412,7 @@ func (h *Handler) buildEventViews(meds []models.Medication, filterID string, del
 			recorded := t.At
 			out = append(out, EventView{
 				At:           t.At,
-				AtFormatted:  t.At.Local().Format("2006-01-02 15:04:05"),
+				AtFormatted:  isoTS(t.At),
 				Type:         EventViewTemperature,
 				TypeLabel:    "Temperature",
 				TemperatureC: t.ValueC,

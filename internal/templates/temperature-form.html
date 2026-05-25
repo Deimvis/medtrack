@@ -2,19 +2,16 @@
 {{$bp := .BasePath}}
 <section class="add-section">
   {{if .FocusMode}}
-  <form hx-post="{{$bp}}/temperature"
+  <form class="tz-form"
+        hx-post="{{$bp}}/temperature"
         hx-swap="none"
         hx-on::after-request="if(event.detail.successful){
           this.reset();
           var atField = this.querySelector('input[name=&quot;at&quot;]');
-          if (atField) {
-            var d = new Date();
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-            atField.value = d.toISOString().slice(0, 16);
-          }
+          if (atField && window.medtrackNowLocal) atField.value = window.medtrackNowLocal();
         }">
   {{else}}
-  <form method="POST" action="{{$bp}}/temperature">
+  <form class="tz-form" method="POST" action="{{$bp}}/temperature">
   {{end}}
     <div class="form-rows">
       <div class="form-row">
@@ -28,7 +25,7 @@
         </label>
         <label class="field">
           <span>When</span>
-          <input type="datetime-local" name="at" value="{{.DefaultLocal}}">
+          <input type="datetime-local" name="at" data-now-default>
         </label>
       </div>
     </div>

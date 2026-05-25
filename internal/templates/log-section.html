@@ -26,7 +26,8 @@
         <line x1="{{.X}}" x2="{{.X}}" y1="{{$chart.Plot.Y2}}" y2="{{add $chart.Plot.Y2 4}}"
               stroke="#6b7383" stroke-width="1"/>
         <text x="{{.X}}" y="{{add $chart.Plot.Y2 18}}"
-              font-size="11" fill="#6b7383" text-anchor="middle">{{.Label}}</text>
+              font-size="11" fill="#6b7383" text-anchor="middle"
+              data-ts="{{.TS}}" data-fmt="{{.Fmt}}">{{.Label}}</text>
       {{end}}
 
       <g class="markers">
@@ -34,10 +35,11 @@
         <line class="marker-line"
               data-marker-x="{{.X}}"
               data-marker-color="{{.Color}}"
-              data-marker-label="{{.Tooltip}}"
+              data-marker-prefix="{{.TooltipPrefix}}"
+              data-marker-ts="{{.TooltipTS}}"
               x1="{{.X}}" x2="{{.X}}" y1="{{.YTop}}" y2="{{.YBottom}}"
               stroke="{{.Color}}" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.85">
-          <title>{{.Tooltip}}</title>
+          <title>{{.TooltipPrefix}}{{.TooltipTS}}</title>
         </line>
       {{end}}
       </g>
@@ -66,10 +68,11 @@
         <circle class="temp-point"
                 data-point-x="{{.X}}"
                 data-point-y="{{.Y}}"
-                data-point-label="{{.Tooltip}}"
+                data-point-prefix="{{.TooltipPrefix}}"
+                data-point-ts="{{.TooltipTS}}"
                 cx="{{.X}}" cy="{{.Y}}" r="3.5"
                 fill="#fff" stroke="#dc2626" stroke-width="2">
-          <title>{{.Tooltip}}</title>
+          <title>{{.TooltipPrefix}}{{.TooltipTS}}</title>
         </circle>
       {{end}}
       </g>
@@ -117,6 +120,13 @@
       return pt.matrixTransform(ctm.inverse());
     }
 
+    function buildLabel(prefixAttr, tsAttr){
+      var prefix = prefixAttr || '';
+      var ts = tsAttr || '';
+      if (!ts) return prefix;
+      var fmt = (window.medtrackFormatTS ? window.medtrackFormatTS(ts, 'short') : ts);
+      return prefix + fmt;
+    }
     function findNearby(x){
       var hits = [];
       markers.forEach(function(line){
@@ -127,7 +137,7 @@
             el: line,
             x: mx,
             color: line.getAttribute('data-marker-color') || '#1f2937',
-            label: line.getAttribute('data-marker-label') || ''
+            label: buildLabel(line.getAttribute('data-marker-prefix'), line.getAttribute('data-marker-ts'))
           });
         }
       });
@@ -139,7 +149,7 @@
             el: p,
             x: px,
             color: '#dc2626',
-            label: p.getAttribute('data-point-label') || ''
+            label: buildLabel(p.getAttribute('data-point-prefix'), p.getAttribute('data-point-ts'))
           });
         }
       });
@@ -261,11 +271,11 @@
     <tbody>
       {{range $events}}
       <tr>
-        <td data-label="When">{{.AtFormatted}}</td>
+        <td data-label="When"><span data-ts="{{.AtFormatted}}" data-fmt="full">{{.AtFormatted}}</span></td>
         <td data-label="Medication">{{if eq (printf "%s" .Type) "temperature"}}<span class="muted">—</span>{{else}}{{.MedicationName}}{{if .MedicationDel}} <span class="badge-deleted">(deleted)</span>{{end}}{{end}}</td>
         <td data-label="Event"><span class="event-type event-{{.Type}}">{{.TypeLabel}}</span></td>
         <td data-label="Cycle / Value" class="num">{{if eq (printf "%s" .Type) "temperature"}}{{printf "%.1f °C" .TemperatureC}}{{else}}{{.CycleIndex}}{{end}}</td>
-        <td data-label="Taking">{{if .TakingFmt}}{{.TakingFmt}}{{else}}<span class="muted">—</span>{{end}}</td>
+        <td data-label="Taking">{{if .TakingFmt}}<span data-ts="{{.TakingFmt}}" data-fmt="rel">{{.TakingFmt}}</span>{{else}}<span class="muted">—</span>{{end}}</td>
       </tr>
       {{end}}
     </tbody>

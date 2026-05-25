@@ -35,7 +35,7 @@ func (h *Handler) Temperature(w http.ResponseWriter, r *http.Request) {
 			ID:          t.ID,
 			ValueC:      t.ValueC,
 			At:          t.At,
-			AtFormatted: t.At.Local().Format("2006-01-02 15:04"),
+			AtFormatted: isoTS(t.At),
 		})
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].At.After(rows[j].At) })
@@ -91,10 +91,15 @@ func (h *Handler) CreateTemperature(w http.ResponseWriter, r *http.Request) {
 	}
 	at := h.now()
 	if raw := strings.TrimSpace(r.FormValue("at")); raw != "" {
-		// <input type="datetime-local"> submits "YYYY-MM-DDTHH:MM" in local time.
-		if t, err := time.ParseInLocation("2006-01-02T15:04", raw, time.Local); err == nil {
+		// Preferred: client sends RFC3339 with the visitor's tz offset.
+		if t, err := time.Parse(time.RFC3339, raw); err == nil {
 			at = t
-		} else if t, err := time.ParseInLocation("2006-01-02T15:04:05", raw, time.Local); err == nil {
+		} else if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+			at = t
+		} else if t, err := time.ParseInLocation("2006-01-02T15:04", raw, time.UTC); err == nil {
+			// Fallback for no-JS submissions — assume UTC (we have no tz hint).
+			at = t
+		} else if t, err := time.ParseInLocation("2006-01-02T15:04:05", raw, time.UTC); err == nil {
 			at = t
 		}
 	}

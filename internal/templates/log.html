@@ -24,6 +24,7 @@
 
   {{template "log-section.html" (dict "BasePath" $bp "Chart" $data.Chart "Events" $data.Events "ShowChart" (not $data.FilterMed))}}
 </main>
+{{template "tz.html"}}
 {{template "persistence.html" (dict "BasePath" $bp)}}
 </body>
 </html>

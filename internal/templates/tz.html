@@ -1,0 +1,138 @@
+{{define "tz.html"}}
+<script>
+(function(){
+  // Convert every element with a [data-ts] attribute to a string in the
+  // visitor's local timezone. The element's text content is replaced.
+  //
+  // Recognised data-fmt values:
+  //   "rel"     → "today HH:MM" / "yesterday HH:MM" / "HH:MM, YYYY-MM-DD"
+  //   "full"    → "YYYY-MM-DD HH:MM:SS"
+  //   "short"   → "YYYY-MM-DD HH:MM"
+  //   "HH:MM"   → tick-axis short time
+  //   "MM-DD"   → tick-axis short date
+  //   "YYYY-MM" → tick-axis year-month
+  //   (default) → "rel"
+  //
+  // Tooltips: elements with [data-tooltip-prefix][data-tooltip-ts][data-tooltip-fmt]
+  // get data-tooltip rewritten as `prefix + formatted(ts)`.
+  function pad(n){ return n < 10 ? '0' + n : String(n); }
+  function yyyy(d){ return String(d.getFullYear()); }
+  function fmtFull(d){
+    return yyyy(d)+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+
+           pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  }
+  function fmtShort(d){
+    return yyyy(d)+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+
+           pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  function fmtHHMM(d){ return pad(d.getHours())+':'+pad(d.getMinutes()); }
+  function fmtMMDD(d){ return pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function fmtYYYYMM(d){ return yyyy(d)+'-'+pad(d.getMonth()+1); }
+  function fmtRel(d, now){
+    var n = now || new Date();
+    var midnight = function(x){ return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    var deltaDays = Math.round((midnight(n) - midnight(d)) / (24*60*60*1000));
+    var hhmm = fmtHHMM(d);
+    if (deltaDays === 0) return 'today ' + hhmm;
+    if (deltaDays === 1) return 'yesterday ' + hhmm;
+    return hhmm + ', ' + yyyy(d) + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+  function format(ts, fmt, now){
+    if (!ts) return '';
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return ts; // unparseable — leave as-is
+    switch (fmt) {
+      case 'full':   return fmtFull(d);
+      case 'short':  return fmtShort(d);
+      case 'HH:MM':  return fmtHHMM(d);
+      case 'MM-DD':  return fmtMMDD(d);
+      case 'YYYY-MM':return fmtYYYYMM(d);
+      case 'rel':
+      default:       return fmtRel(d, now);
+    }
+  }
+  window.medtrackFormatTS = format;
+
+  function applyAll(root){
+    var now = new Date();
+    (root || document).querySelectorAll('[data-ts]').forEach(function(el){
+      var ts = el.getAttribute('data-ts');
+      if (!ts) return;
+      var fmt = el.getAttribute('data-fmt') || 'rel';
+      el.textContent = format(ts, fmt, now);
+    });
+    (root || document).querySelectorAll('[data-tooltip-ts]').forEach(function(el){
+      var ts = el.getAttribute('data-tooltip-ts');
+      var prefix = el.getAttribute('data-tooltip-prefix') || '';
+      var fmt = el.getAttribute('data-tooltip-fmt') || 'short';
+      el.setAttribute('data-tooltip', prefix + format(ts, fmt, now));
+    });
+  }
+  window.medtrackApplyTS = applyAll;
+
+  // Run once initially, then after every successful HTMX swap so freshly-
+  // rendered partials get formatted too.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ applyAll(); });
+  } else {
+    applyAll();
+  }
+  document.addEventListener('htmx:afterSwap', function(evt){
+    applyAll(evt && evt.target);
+  });
+
+  // Datetime-local default value: fill any <input data-now-default> with the
+  // visitor's local "now" in the format the browser expects.
+  function nowLocalIso(){
+    var d = new Date();
+    return yyyy(d)+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+
+           pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+  window.medtrackNowLocal = nowLocalIso;
+  function fillNowDefaults(){
+    document.querySelectorAll('input[data-now-default]').forEach(function(el){
+      if (!el.value) el.value = nowLocalIso();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fillNowDefaults);
+  } else {
+    fillNowDefaults();
+  }
+  document.addEventListener('htmx:afterSwap', fillNowDefaults);
+
+  // For temperature form submissions: convert the datetime-local input value
+  // (which has no tz info) to an absolute ISO string with the visitor's tz
+  // offset, so the server can store it correctly regardless of server tz.
+  // Forms opt in by adding the class "tz-form".
+  function tzIsoFromDatetimeLocal(value){
+    if (!value) return '';
+    // "YYYY-MM-DDTHH:MM" or "...:SS" → interpret in the browser's local tz.
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+    if (!m) return value;
+    var d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0), 0);
+    return d.toISOString(); // UTC ISO with Z suffix — the server parses it as RFC3339.
+  }
+  window.medtrackTzIso = tzIsoFromDatetimeLocal;
+
+  // Intercept native form submits on .tz-form to rewrite the at field.
+  document.addEventListener('submit', function(evt){
+    var form = evt.target;
+    if (!form || !form.classList || !form.classList.contains('tz-form')) return;
+    var input = form.querySelector('input[name="at"]');
+    if (!input || !input.value) return;
+    input.value = tzIsoFromDatetimeLocal(input.value);
+  }, true);
+
+  // HTMX uses its own request building — intercept before the request fires.
+  document.addEventListener('htmx:configRequest', function(evt){
+    if (!evt || !evt.detail) return;
+    var form = evt.detail.elt && evt.detail.elt.closest && evt.detail.elt.closest('form.tz-form');
+    if (!form) return;
+    if (evt.detail.parameters && typeof evt.detail.parameters.at === 'string' && evt.detail.parameters.at) {
+      evt.detail.parameters.at = tzIsoFromDatetimeLocal(evt.detail.parameters.at);
+    }
+  });
+})();
+</script>
+{{end}}
