@@ -381,6 +381,19 @@ tr.row-status-none     { background: transparent; }
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(44,123,229,0.15);
 }
+
+/* Custom chevron for <select> so the arrow sits a few px from the right edge
+   instead of flush against it (native renderings pin it to the border). */
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1l4 4 4-4' stroke='%236b7383' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.field select::-ms-expand { display: none; }
 .field .row {
   display: flex;
   align-items: center;
