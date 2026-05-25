@@ -120,6 +120,9 @@ html, body {
 }
 .btn-danger.ghost:hover { background: #fdecec; border-color: #fdecec; }
 
+/* mobile-delete: shown only on mobile, hidden on desktop. */
+.mobile-delete { display: none; }
+
 /* ─── Table (desktop) ────────────────────────────────────── */
 .table-wrap { overflow: visible; -webkit-overflow-scrolling: touch; }
 
@@ -366,48 +369,134 @@ tr.row-status-none     { background: transparent; }
   .page-header h1 { font-size: 18px; }
   .field.span-2 { grid-column: span 1; }
 
-  .med-table, .med-table thead, .med-table tbody, .med-table tr, .med-table td {
+  /* ── Medication card ──────────────────────────────── */
+  .med-table,
+  .med-table thead,
+  .med-table tbody,
+  .med-table tr,
+  .med-table td {
     display: block;
     width: 100%;
   }
   .med-table { border: none; background: transparent; overflow: visible; }
   .med-table thead { display: none; }
+
   .med-table tbody tr {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 12px;
-    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    padding: 4px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   .med-table tbody tr.row-status-early    { background: var(--early); }
   .med-table tbody tr.row-status-ontime,
   .med-table tbody tr.row-status-ready    { background: var(--ontime); }
   .med-table tbody tr.row-status-late     { background: var(--late); }
+
+  /* Default cell: label on top, value below — full width. */
   .med-table td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
+    display: block;
+    padding: 10px 16px;
     border-bottom: 1px solid rgba(0,0,0,0.06);
-    text-align: right;
+    text-align: left;
   }
   .med-table td:last-child { border-bottom: none; }
   .med-table td::before {
     content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--muted);
-    text-align: left;
-    flex: 0 0 auto;
-    margin-right: 8px;
   }
-  .med-table tr.empty td::before { content: ""; }
-  .med-table tr.empty td { justify-content: center; text-align: center; }
 
-  .event-table, .event-table thead, .event-table tbody, .event-table tr, .event-table td {
+  /* Name cell becomes the card header: name + edit + delete on one row. */
+  .med-table td[data-label="Name"] {
+    padding: 12px 12px 10px;
+    background: rgba(255,255,255,0.45);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .med-table td[data-label="Name"]::before { display: none; }
+  .med-table td[data-label="Name"] .med-name {
+    font-size: 17px;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .med-table td[data-label="Name"] .edit-link {
+    font-size: 13px;
+    flex: 0 0 auto;
+  }
+  .med-table td[data-label="Name"] .mobile-delete {
+    margin-left: auto; /* push only the delete to the right */
+  }
+  .med-table td[data-label="Delete"] {
+    /* Desktop-only delete cell — the × lives inside the Name header on mobile. */
+    display: none;
+  }
+  .med-table .mobile-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 22px;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+
+  /* Combo cells: counter + action buttons in one tight horizontal cluster. */
+  .med-table td.combo { padding: 8px 12px; }
+  .med-table td.combo::before {
+    display: inline-block;
+    margin: 0 10px 0 0;
+    vertical-align: middle;
+  }
+  .med-table td.combo .combo-stack {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: auto;
+    vertical-align: middle;
+  }
+  .med-table td.combo .counter { font-size: 18px; }
+  .med-table td.combo .action-cluster { flex: 0 0 auto; gap: 6px; }
+
+  /* Put the two timing cells side-by-side instead of stacked. */
+  .med-table td[data-label="First in cycle"],
+  .med-table td[data-label="Last in cycle"] {
+    display: inline-block;
+    width: 50%;
+    vertical-align: top;
+    border-bottom: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .med-table td[data-label="First in cycle"] {
+    border-right: 1px solid rgba(0,0,0,0.06);
+  }
+
+  .med-table tr.empty td::before { content: ""; }
+  .med-table tr.empty td {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--muted);
+  }
+
+  /* ── Event log card ───────────────────────────────── */
+  .event-table,
+  .event-table thead,
+  .event-table tbody,
+  .event-table tr,
+  .event-table td {
     display: block;
     width: 100%;
   }
@@ -416,20 +505,20 @@ tr.row-status-none     { background: transparent; }
   .event-table tbody tr {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 10px;
     margin-bottom: 10px;
-    overflow: hidden;
+    padding: 4px 0;
   }
   .event-table td {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 12px;
+    display: block;
+    padding: 8px 14px;
     border-bottom: 1px solid rgba(0,0,0,0.06);
   }
   .event-table td:last-child { border-bottom: none; }
   .event-table td::before {
     content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;

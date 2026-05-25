@@ -5,6 +5,12 @@
   <td data-label="Name">
     <span class="med-name">{{$m.Name}}</span>
     <a class="edit-link" href="{{$bp}}/medications/{{$m.ID}}/edit" title="Edit">edit</a>
+    <button class="btn btn-danger ghost mobile-delete"
+            hx-delete="{{$bp}}/medications/{{$m.ID}}"
+            hx-target="#med-table"
+            hx-swap="outerHTML"
+            aria-label="Delete medication"
+            hx-confirm="Delete {{$m.Name}}? It will be removed from the diary; its event log is kept and remains visible on the Log page.">×</button>
   </td>
 
   <td data-label="Dose" class="combo combo-dose">
