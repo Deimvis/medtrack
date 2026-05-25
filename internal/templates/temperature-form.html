@@ -4,7 +4,15 @@
   {{if .FocusMode}}
   <form hx-post="{{$bp}}/temperature"
         hx-swap="none"
-        hx-on::after-request="if(event.detail.successful){ this.reset(); }">
+        hx-on::after-request="if(event.detail.successful){
+          this.reset();
+          var atField = this.querySelector('input[name=&quot;at&quot;]');
+          if (atField) {
+            var d = new Date();
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            atField.value = d.toISOString().slice(0, 16);
+          }
+        }">
   {{else}}
   <form method="POST" action="{{$bp}}/temperature">
   {{end}}

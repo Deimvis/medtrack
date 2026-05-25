@@ -367,12 +367,15 @@ func (h *Handler) buildEventViews(meds []models.Medication, filterID string, del
 	}
 	if filterID == "" {
 		for _, t := range temps {
+			recorded := t.At
 			out = append(out, EventView{
 				At:           t.At,
 				AtFormatted:  t.At.Local().Format("2006-01-02 15:04:05"),
 				Type:         EventViewTemperature,
 				TypeLabel:    "Temperature",
 				TemperatureC: t.ValueC,
+				TakingAt:     &recorded,
+				TakingFmt:    formatTakingTimestamp(t.At, now),
 			})
 		}
 	}
