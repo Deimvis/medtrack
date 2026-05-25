@@ -6,7 +6,7 @@
     <span class="med-name">{{$m.Name}}</span>
   </td>
 
-  <td data-label="Dose" class="combo combo-dose">
+  <td data-label="Doses taken" class="combo combo-dose">
     <div class="combo-stack">
       <button class="counter-btn"
               hx-post="{{$bp}}/medications/{{$m.ID}}/dose"
@@ -31,7 +31,7 @@
     </div>
   </td>
 
-  <td data-label="Cycle" class="combo combo-cycle">
+  <td data-label="Cycles passed" class="combo combo-cycle">
     <div class="combo-stack">
       <button class="counter-btn"
               hx-post="{{$bp}}/medications/{{$m.ID}}/cycle"

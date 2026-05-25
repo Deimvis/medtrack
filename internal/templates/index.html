@@ -102,6 +102,15 @@
 
         <div class="form-row">
           <fieldset class="field">
+            <legend>Cycles</legend>
+            <div class="row">
+              <input type="number" min="0" name="cyclesTotalMin" placeholder="min count">
+              <span>–</span>
+              <input type="number" min="0" name="cyclesTotalMax" placeholder="max count">
+            </div>
+          </fieldset>
+
+          <fieldset class="field">
             <legend>Cycle duration</legend>
             <div class="row">
               <input type="number" min="0" step="any" id="cycleValue" name="cycleValue" value="1">
@@ -110,15 +119,6 @@
                 <option value="day" selected>day(s)</option>
                 <option value="week">week(s)</option>
               </select>
-            </div>
-          </fieldset>
-
-          <fieldset class="field">
-            <legend>Cycles</legend>
-            <div class="row">
-              <input type="number" min="0" name="cyclesTotalMin" placeholder="min count">
-              <span>–</span>
-              <input type="number" min="0" name="cyclesTotalMax" placeholder="max count">
             </div>
           </fieldset>
         </div>
@@ -193,8 +193,8 @@
         body: reader.result
       }).then(function(resp){
         if (resp.ok) {
-          try { localStorage.removeItem(RESTORE_DISABLED_KEY); } catch (_) {}
-          saveStateToLocalStorage();
+          try { localStorage.removeItem('medtrackRestoreDisabled'); } catch (_) {}
+          if (window.medtrackSaveState) window.medtrackSaveState();
           htmx.ajax('GET', BASE + '/medications/list', { target: '#med-table', swap: 'outerHTML' });
         } else {
           resp.text().then(function(t){ alert('Import failed: ' + t); });
@@ -205,102 +205,10 @@
     reader.readAsText(file);
   });
 
-  // ─── localStorage persistence (server is per-session in-memory) ──────────
-  // Snapshot the diary after every successful state-changing request and
-  // restore it on next page load if the server has no data.
-  var STATE_KEY = 'medtrackState';
-  var RESTORE_DISABLED_KEY = 'medtrackRestoreDisabled';
-  var STATE_VERSION = 1;
-
-  function saveStateToLocalStorage() {
-    return fetch(BASE + '/export.json', { headers: { 'Accept': 'application/json' } })
-      .then(function(res){ if (!res.ok) return; return res.json(); })
-      .then(function(data){
-        if (!data) return;
-        var hasData = (Array.isArray(data.medications) && data.medications.length > 0) ||
-                      (Array.isArray(data.deletedMedications) && data.deletedMedications.length > 0);
-        try { localStorage.setItem(STATE_KEY, JSON.stringify({ version: STATE_VERSION, data: data })); } catch (_) {}
-        // Once the user has any data again, re-arm auto-restore for next load.
-        if (hasData) {
-          try { localStorage.removeItem(RESTORE_DISABLED_KEY); } catch (_) {}
-        }
-      })
-      .catch(function(){});
-  }
-
-  // Wipe localStorage and arm the restore-disabled flag so the next page load
-  // doesn't re-import what the user just deleted.
-  function wipeLocalStorage() {
-    try { localStorage.removeItem(STATE_KEY); } catch (_) {}
-    try { localStorage.setItem(RESTORE_DISABLED_KEY, '1'); } catch (_) {}
-  }
-
-  document.addEventListener('htmx:afterRequest', function(evt){
-    if (!evt || !evt.detail || !evt.detail.successful) return;
-    var url = (evt.detail.requestConfig && evt.detail.requestConfig.path) || (evt.detail.pathInfo && evt.detail.pathInfo.finalRequestPath) || '';
-    if (url.indexOf('/state/clear') !== -1) {
-      wipeLocalStorage();
-      return;
-    }
-    if (url.indexOf('/state/reset-progress') !== -1) {
-      // Reset is destructive too — drop the snapshot so a restart doesn't
-      // bring increments back.
-      wipeLocalStorage();
-      return;
-    }
-    // For any other successful request (dose, cycle, create, delete, etc.) —
-    // snapshot the current state.
-    saveStateToLocalStorage();
-  });
-
-  function restoreFromLocalStorageIfNeeded() {
-    var disabled = false;
-    try { disabled = localStorage.getItem(RESTORE_DISABLED_KEY) === '1'; } catch (_) {}
-    if (disabled) return;
-
-    var raw = null;
-    try { raw = localStorage.getItem(STATE_KEY); } catch (_) { return; }
-    if (!raw) return;
-
-    var parsed = null;
-    try { parsed = JSON.parse(raw); } catch (_) { return; }
-    if (!parsed || parsed.version !== STATE_VERSION || !parsed.data) return;
-
-    var local = parsed.data;
-    var hasLocal = (Array.isArray(local.medications) && local.medications.length > 0) ||
-                   (Array.isArray(local.deletedMedications) && local.deletedMedications.length > 0);
-    if (!hasLocal) return;
-
-    fetch(BASE + '/export.json', { headers: { 'Accept': 'application/json' } })
-      .then(function(res){ if (!res.ok) throw new Error('bad'); return res.json(); })
-      .then(function(server){
-        var hasServer = (Array.isArray(server.medications) && server.medications.length > 0) ||
-                        (Array.isArray(server.deletedMedications) && server.deletedMedications.length > 0);
-        if (hasServer) return; // server already has data; don't overwrite
-
-        return fetch(BASE + '/import.json', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(local)
-        }).then(function(resp){
-          if (!resp.ok) throw new Error('import failed');
-          window.location.reload();
-        });
-      })
-      .catch(function(){});
-  }
-
-  // Run once on load.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', restoreFromLocalStorageIfNeeded);
-  } else {
-    restoreFromLocalStorageIfNeeded();
-  }
-
-  // Initial snapshot so the local copy stays current even with no edits.
-  saveStateToLocalStorage();
 })();
 </script>
+
+{{template "persistence.html" (dict "BasePath" $bp)}}
 </body>
 </html>
 {{end}}

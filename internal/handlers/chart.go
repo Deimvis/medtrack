@@ -195,7 +195,7 @@ func (h *Handler) buildTemperatureChart(temps []models.TemperatureEvent, meds []
 		chart.YTicks = append(chart.YTicks, ChartYTick{
 			Y:      mapY(v),
 			ValueC: v,
-			Label:  fmt.Sprintf("%.1f", v),
+			Label:  fmt.Sprintf("%.1f°", v),
 		})
 	}
 

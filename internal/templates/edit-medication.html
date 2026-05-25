@@ -51,6 +51,15 @@
 
         <div class="form-row">
           <fieldset class="field">
+            <legend>Cycles</legend>
+            <div class="row">
+              <input type="number" min="0" name="cyclesTotalMin" value="{{if $m.CyclesTotal.Min}}{{$m.CyclesTotal.Min}}{{end}}" placeholder="min count">
+              <span>–</span>
+              <input type="number" min="0" name="cyclesTotalMax" value="{{if $m.CyclesTotal.Max}}{{$m.CyclesTotal.Max}}{{end}}" placeholder="max count">
+            </div>
+          </fieldset>
+
+          <fieldset class="field">
             <legend>Cycle duration</legend>
             <div class="row">
               <input type="number" min="0" step="any" name="cycleValue" value="{{if $m.CycleDuration.Value}}{{$m.CycleDuration.Value}}{{else}}1{{end}}">
@@ -59,15 +68,6 @@
                 <option value="day" {{if or (eq $m.CycleDuration.Unit "day") (eq $m.CycleDuration.Unit "")}}selected{{end}}>day(s)</option>
                 <option value="week" {{if eq $m.CycleDuration.Unit "week"}}selected{{end}}>week(s)</option>
               </select>
-            </div>
-          </fieldset>
-
-          <fieldset class="field">
-            <legend>Cycles</legend>
-            <div class="row">
-              <input type="number" min="0" name="cyclesTotalMin" value="{{if $m.CyclesTotal.Min}}{{$m.CyclesTotal.Min}}{{end}}" placeholder="min count">
-              <span>–</span>
-              <input type="number" min="0" name="cyclesTotalMax" value="{{if $m.CyclesTotal.Max}}{{$m.CyclesTotal.Max}}{{end}}" placeholder="max count">
             </div>
           </fieldset>
         </div>
@@ -79,6 +79,7 @@
     </form>
   </section>
 </main>
+{{template "persistence.html" (dict "BasePath" $bp)}}
 </body>
 </html>
 {{end}}

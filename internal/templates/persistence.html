@@ -1,0 +1,100 @@
+{{define "persistence.html"}}
+{{$bp := .BasePath}}
+<script>
+(function(){
+  // Shared localStorage persistence for medtrack. Included on every page that
+  // can mutate state so an immediate snapshot is taken after navigation /
+  // POST+redirect flows (the temperature page, for instance).
+  var BASE = {{$bp}};
+  var STATE_KEY = 'medtrackState';
+  var RESTORE_DISABLED_KEY = 'medtrackRestoreDisabled';
+  var STATE_VERSION = 1;
+
+  function dataHasContent(data){
+    if (!data) return false;
+    return (Array.isArray(data.medications) && data.medications.length > 0) ||
+           (Array.isArray(data.deletedMedications) && data.deletedMedications.length > 0) ||
+           (Array.isArray(data.temperatures) && data.temperatures.length > 0);
+  }
+
+  function saveStateToLocalStorage(){
+    return fetch(BASE + '/export.json', { headers: { 'Accept': 'application/json' } })
+      .then(function(res){ if (!res.ok) return; return res.json(); })
+      .then(function(data){
+        if (!data) return;
+        try { localStorage.setItem(STATE_KEY, JSON.stringify({ version: STATE_VERSION, data: data })); } catch (_) {}
+        if (dataHasContent(data)) {
+          try { localStorage.removeItem(RESTORE_DISABLED_KEY); } catch (_) {}
+        }
+      })
+      .catch(function(){});
+  }
+  // Expose for callers that need an explicit snapshot (e.g. after manual import).
+  window.medtrackSaveState = saveStateToLocalStorage;
+
+  function wipeLocalStorage(){
+    try { localStorage.removeItem(STATE_KEY); } catch (_) {}
+    try { localStorage.setItem(RESTORE_DISABLED_KEY, '1'); } catch (_) {}
+  }
+  window.medtrackWipeState = wipeLocalStorage;
+
+  // After every successful HTMX request — snapshot, unless the action was
+  // destructive (clear/reset), in which case wipe local storage instead.
+  document.addEventListener('htmx:afterRequest', function(evt){
+    if (!evt || !evt.detail || !evt.detail.successful) return;
+    var url = (evt.detail.requestConfig && evt.detail.requestConfig.path) ||
+              (evt.detail.pathInfo && evt.detail.pathInfo.finalRequestPath) || '';
+    if (url.indexOf('/state/clear') !== -1 || url.indexOf('/state/reset-progress') !== -1) {
+      wipeLocalStorage();
+      return;
+    }
+    // Avoid recursion when the snapshot itself fires.
+    if (url.indexOf('/export.json') !== -1) return;
+    saveStateToLocalStorage();
+  });
+
+  function restoreFromLocalStorageIfNeeded(){
+    var disabled = false;
+    try { disabled = localStorage.getItem(RESTORE_DISABLED_KEY) === '1'; } catch (_) {}
+    if (disabled) return;
+
+    var raw = null;
+    try { raw = localStorage.getItem(STATE_KEY); } catch (_) { return; }
+    if (!raw) return;
+
+    var parsed = null;
+    try { parsed = JSON.parse(raw); } catch (_) { return; }
+    if (!parsed || parsed.version !== STATE_VERSION || !parsed.data) return;
+    if (!dataHasContent(parsed.data)) return;
+
+    fetch(BASE + '/export.json', { headers: { 'Accept': 'application/json' } })
+      .then(function(res){ if (!res.ok) throw new Error('bad'); return res.json(); })
+      .then(function(server){
+        if (dataHasContent(server)) return; // server already has data; don't overwrite
+
+        return fetch(BASE + '/import.json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed.data)
+        }).then(function(resp){
+          if (!resp.ok) throw new Error('import failed');
+          window.location.reload();
+        });
+      })
+      .catch(function(){});
+  }
+
+  function init(){
+    restoreFromLocalStorageIfNeeded();
+    // One snapshot per page load — captures POST→redirect flows like the
+    // temperature page that don't go through HTMX.
+    saveStateToLocalStorage();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+{{end}}
