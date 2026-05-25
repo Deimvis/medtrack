@@ -157,8 +157,13 @@ html, body {
 }
 .btn-danger.ghost:hover { background: #fdecec; border-color: #fdecec; }
 
-/* mobile-delete: shown only on mobile, hidden on desktop. */
-.mobile-delete { display: none; }
+/* "Actions" cell: edit pen + delete × side by side. */
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+.row-actions .edit-link { margin-left: 0; }
+.row-actions .btn-danger.ghost { margin-left: 4px; }
 
 /* ─── Table (desktop) ────────────────────────────────────── */
 .table-wrap { overflow: visible; -webkit-overflow-scrolling: touch; }
@@ -201,8 +206,25 @@ tr.row-status-done,
 tr.row-status-none     { background: transparent; }
 
 .med-name { font-weight: 600; }
-.edit-link { margin-left: 8px; font-size: 12px; color: var(--muted); text-decoration: none; }
-.edit-link:hover { color: var(--primary); text-decoration: underline; }
+.edit-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted);
+  text-decoration: none;
+  transition: background-color 0.12s, color 0.12s;
+}
+.edit-link:hover {
+  background: #eef2f7;
+  color: var(--primary);
+  text-decoration: none;
+}
 
 .muted.small { font-weight: 400; font-size: 12px; }
 
@@ -466,16 +488,18 @@ tr.row-status-none     { background: transparent; }
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .med-table td[data-label="Name"] .edit-link {
-    font-size: 13px;
-    flex: 0 0 auto;
+  /* Actions cell shows on mobile too — render as a tight right-aligned row. */
+  .med-table td[data-label="Actions"] { text-align: right; }
+  .med-table td[data-label="Actions"]::before { display: none; }
+  .med-table .row-actions .edit-link {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
   }
-  .med-table td[data-label="Name"] .mobile-delete {
-    margin-left: auto; /* push only the delete to the right */
-  }
-  .med-table td[data-label="Delete"] {
-    /* Desktop-only delete cell — the × lives inside the Name header on mobile. */
-    display: none;
+  .med-table .row-actions .btn-danger.ghost {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
   }
   .med-table .mobile-delete {
     display: inline-flex;

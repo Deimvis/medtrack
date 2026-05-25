@@ -4,13 +4,6 @@
 <tr id="row-{{$m.ID}}" class="row-status-{{$m.Status}}">
   <td data-label="Name">
     <span class="med-name">{{$m.Name}}</span>
-    <a class="edit-link" href="{{$bp}}/medications/{{$m.ID}}/edit" title="Edit">edit</a>
-    <button class="btn btn-danger ghost mobile-delete"
-            hx-delete="{{$bp}}/medications/{{$m.ID}}"
-            hx-target="#med-table"
-            hx-swap="outerHTML"
-            aria-label="Delete medication"
-            hx-confirm="Delete {{$m.Name}}? It will be removed from the diary; its event log is kept and remains visible on the Log page.">×</button>
   </td>
 
   <td data-label="Dose" class="combo combo-dose">
@@ -65,11 +58,13 @@
   <td data-label="First in cycle">{{if $m.FirstInCycle}}{{$m.FirstInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
   <td data-label="Last in cycle">{{if $m.LastInCycle}}{{$m.LastInCycle}}{{else}}<span class="muted">—</span>{{end}}</td>
 
-  <td data-label="Delete" class="actions">
+  <td data-label="Actions" class="actions row-actions">
+    <a class="edit-link" href="{{$bp}}/medications/{{$m.ID}}/edit" title="Edit" aria-label="Edit medication">✎</a>
     <button class="btn btn-danger ghost"
             hx-delete="{{$bp}}/medications/{{$m.ID}}"
             hx-target="#med-table"
             hx-swap="outerHTML"
+            aria-label="Delete medication"
             hx-confirm="Delete {{$m.Name}}? It will be removed from the diary; its event log is kept and remains visible on the Log page.">×</button>
   </td>
 </tr>
