@@ -8,7 +8,7 @@
   {{if $chart.Empty}}
     <p class="muted">No temperature readings yet — <a href="{{$bp}}/temperature">record one</a> to see the graph.</p>
   {{else}}
-  <div class="chart-wrap">
+  <div class="chart-wrap" data-chart-w="{{$chart.W}}" data-chart-h="{{$chart.H}}">
     <svg class="temp-chart" viewBox="0 0 {{$chart.W}} {{$chart.H}}" preserveAspectRatio="none" aria-label="Body temperature over time">
       <rect x="{{$chart.Plot.X1}}" y="{{$chart.Plot.Y1}}"
             width="{{sub $chart.Plot.X2 $chart.Plot.X1}}"
@@ -29,12 +29,31 @@
               font-size="11" fill="#6b7383" text-anchor="middle">{{.Label}}</text>
       {{end}}
 
+      <g class="markers">
       {{range $chart.Markers}}
-        <line x1="{{.X}}" x2="{{.X}}" y1="{{.YTop}}" y2="{{.YBottom}}"
+        <line class="marker-line"
+              data-marker-x="{{.X}}"
+              data-marker-color="{{.Color}}"
+              data-marker-label="{{.Tooltip}}"
+              x1="{{.X}}" x2="{{.X}}" y1="{{.YTop}}" y2="{{.YBottom}}"
               stroke="{{.Color}}" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.85">
           <title>{{.Tooltip}}</title>
         </line>
       {{end}}
+      </g>
+
+      <!-- Invisible hover band layer: full plot height, mouse-move target. -->
+      <rect class="chart-hit-area"
+            x="{{$chart.Plot.X1}}" y="{{$chart.Plot.Y1}}"
+            width="{{sub $chart.Plot.X2 $chart.Plot.X1}}"
+            height="{{sub $chart.Plot.Y2 $chart.Plot.Y1}}"
+            fill="transparent"/>
+
+      <!-- Vertical guide that follows the cursor on hover. -->
+      <line class="chart-cursor"
+            x1="0" x2="0" y1="{{$chart.Plot.Y1}}" y2="{{$chart.Plot.Y2}}"
+            stroke="#1f2937" stroke-width="1" stroke-dasharray="2 3"
+            opacity="0" pointer-events="none"/>
 
       {{if $chart.PolylinePts}}
         <polyline points="{{$chart.PolylinePts}}"
@@ -57,9 +76,141 @@
       {{end}}
     </ul>
     {{end}}
+
+    <div class="chart-tooltip" role="tooltip" aria-hidden="true"></div>
   </div>
   {{end}}
 </section>
+
+<script>
+(function(){
+  // Wire up every .chart-wrap that hasn't been initialised yet. Re-runs after
+  // HTMX swaps (Focus page) because the script is re-parsed each time the
+  // partial is rendered.
+  document.querySelectorAll('.chart-wrap:not([data-tooltip-init])').forEach(function(wrap){
+    wrap.setAttribute('data-tooltip-init', '1');
+
+    var svg = wrap.querySelector('svg.temp-chart');
+    var hit = svg && svg.querySelector('.chart-hit-area');
+    var cursor = svg && svg.querySelector('.chart-cursor');
+    var tooltip = wrap.querySelector('.chart-tooltip');
+    var markers = Array.prototype.slice.call(svg ? svg.querySelectorAll('.marker-line') : []);
+    if (!svg || !hit || !cursor || !tooltip || markers.length === 0) return;
+
+    var viewBoxW = parseFloat(wrap.getAttribute('data-chart-w')) || 720;
+    // Tolerance in viewBox X units. ~1.5% of width — enough to catch overlapping markers.
+    var TOL = viewBoxW * 0.015;
+
+    function svgPointFromEvent(evt){
+      var pt = svg.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      var ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      return pt.matrixTransform(ctm.inverse());
+    }
+
+    function findNearby(x){
+      var hits = [];
+      markers.forEach(function(line){
+        var mx = parseFloat(line.getAttribute('data-marker-x'));
+        if (Math.abs(mx - x) <= TOL) {
+          hits.push({
+            x: mx,
+            color: line.getAttribute('data-marker-color') || '#1f2937',
+            label: line.getAttribute('data-marker-label') || ''
+          });
+        }
+      });
+      // Sort by distance to cursor, then by label, so the closest comes first.
+      hits.sort(function(a, b){
+        var dx = Math.abs(a.x - x) - Math.abs(b.x - x);
+        return dx !== 0 ? dx : a.label.localeCompare(b.label);
+      });
+      return hits;
+    }
+
+    function highlight(activeXs){
+      markers.forEach(function(line){
+        var mx = parseFloat(line.getAttribute('data-marker-x'));
+        var active = activeXs.indexOf(mx) !== -1;
+        line.setAttribute('opacity', active ? '1' : '0.35');
+        line.setAttribute('stroke-width', active ? '2.5' : '1.5');
+      });
+    }
+    function resetHighlight(){
+      markers.forEach(function(line){
+        line.setAttribute('opacity', '0.85');
+        line.setAttribute('stroke-width', '1.5');
+      });
+    }
+
+    function renderTooltip(hits, mouseEvent){
+      if (hits.length === 0) {
+        tooltip.style.display = 'none';
+        tooltip.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      var html = '<ul>';
+      hits.forEach(function(h){
+        html += '<li><span class="swatch" style="background:' + h.color + '"></span>' +
+                escapeHtml(h.label) + '</li>';
+      });
+      html += '</ul>';
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
+      tooltip.setAttribute('aria-hidden', 'false');
+
+      // Position the tooltip near the cursor but inside the wrap bounds.
+      var wrapRect = wrap.getBoundingClientRect();
+      var localX = mouseEvent.clientX - wrapRect.left;
+      var localY = mouseEvent.clientY - wrapRect.top;
+      var tw = tooltip.offsetWidth;
+      var th = tooltip.offsetHeight;
+      var left = localX + 14;
+      var top = localY + 14;
+      if (left + tw > wrapRect.width - 6) left = localX - tw - 14;
+      if (top + th > wrapRect.height - 6) top = localY - th - 14;
+      if (left < 6) left = 6;
+      if (top < 6) top = 6;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    }
+
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    }
+
+    function handleMove(evt){
+      var p = svgPointFromEvent(evt);
+      if (!p) return;
+      var hits = findNearby(p.x);
+      cursor.setAttribute('x1', p.x);
+      cursor.setAttribute('x2', p.x);
+      cursor.setAttribute('opacity', '0.55');
+      highlight(hits.map(function(h){ return h.x; }));
+      renderTooltip(hits, evt);
+    }
+    function handleLeave(){
+      cursor.setAttribute('opacity', '0');
+      tooltip.style.display = 'none';
+      tooltip.setAttribute('aria-hidden', 'true');
+      resetHighlight();
+    }
+
+    hit.addEventListener('mousemove', handleMove);
+    hit.addEventListener('mouseleave', handleLeave);
+    // Touch: tap to show, tap-elsewhere to hide.
+    hit.addEventListener('touchstart', function(evt){
+      var t = evt.touches[0];
+      if (!t) return;
+      handleMove({ clientX: t.clientX, clientY: t.clientY });
+    }, { passive: true });
+  });
+})();
+</script>
 {{end}}
 
 <section class="table-wrap">
