@@ -100,6 +100,10 @@ func (h *Handler) CreateTemperature(w http.ResponseWriter, r *http.Request) {
 	}
 	s := storeFromContext(r)
 	s.AddTemperature(at, val)
+	if r.Header.Get("HX-Request") == "true" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	http.Redirect(w, r, h.basePath+"/temperature", http.StatusSeeOther)
 }
 

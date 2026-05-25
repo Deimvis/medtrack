@@ -1,0 +1,70 @@
+{{define "focus.html"}}
+{{$bp := .BasePath}}
+{{$data := .Data}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Focus — {{$data.DiaryName}}</title>
+  <link rel="icon" href="{{$bp}}/static/favicon.svg">
+  <link rel="stylesheet" href="{{$bp}}/static/styles.css">
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+<main class="container">
+  <header class="page-header">
+    <h1>Focus</h1>
+    <nav class="header-actions">
+      <a href="{{$bp}}/" class="btn ghost">← Full view</a>
+    </nav>
+  </header>
+
+  <section class="table-wrap">
+    {{template "medication-table.html" (dict "Data" (dict "Medications" $data.Medications) "BasePath" $bp)}}
+  </section>
+
+  <h2 class="section-title">Record temperature</h2>
+  <div id="focus-temp-form">
+    {{template "temperature-form.html" (dict "BasePath" $bp "DefaultLocal" $data.DefaultLocal "FocusMode" true)}}
+  </div>
+
+  <h2 class="section-title">Event log</h2>
+  {{template "focus-log-wrapper.html" (dict "BasePath" $bp "Data" (dict "Chart" $data.Chart "Events" $data.Events "ShowChart" true))}}
+</main>
+
+<script>
+(function(){
+  var BASE = {{$bp}};
+
+  // Close any open <details class="menu"> when clicking outside it.
+  document.addEventListener('click', function(e){
+    document.querySelectorAll('details.menu[open]').forEach(function(d){
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+
+  // Refresh the chart + event log after any successful HTMX request on this
+  // page (dose increment, cycle advance, temperature submission, …). We use
+  // a tiny debounce so multiple near-simultaneous requests collapse into one
+  // server fetch.
+  var refreshTimer = null;
+  function refreshLog(){
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function(){
+      htmx.ajax('GET', BASE + '/focus/log-section', { target: '#focus-log', swap: 'outerHTML' });
+    }, 50);
+  }
+  document.addEventListener('htmx:afterRequest', function(evt){
+    if (!evt || !evt.detail || !evt.detail.successful) return;
+    // Avoid recursion when the refresh itself completes.
+    var url = (evt.detail.requestConfig && evt.detail.requestConfig.path) ||
+              (evt.detail.pathInfo && evt.detail.pathInfo.finalRequestPath) || '';
+    if (url.indexOf('/focus/log-section') !== -1) return;
+    refreshLog();
+  });
+})();
+</script>
+</body>
+</html>
+{{end}}

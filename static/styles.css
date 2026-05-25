@@ -103,6 +103,8 @@ html, body {
   color: var(--primary);
   flex: 0 0 auto;
 }
+/* Pin this button to the left edge of the nav row. */
+.nav-btn-left { margin-right: auto; }
 @media (max-width: 699px) {
   .primary-nav { justify-content: stretch; }
   .nav-btn { flex: 1 1 0; justify-content: center; }

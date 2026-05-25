@@ -1,0 +1,32 @@
+{{define "temperature-form.html"}}
+{{$bp := .BasePath}}
+<section class="add-section">
+  {{if .FocusMode}}
+  <form hx-post="{{$bp}}/temperature"
+        hx-swap="none"
+        hx-on::after-request="if(event.detail.successful){ this.reset(); }">
+  {{else}}
+  <form method="POST" action="{{$bp}}/temperature">
+  {{end}}
+    <div class="form-rows">
+      <div class="form-row">
+        <label class="field">
+          <span>Value °C *</span>
+          <input type="text"
+                 inputmode="decimal"
+                 pattern="\d{1,2}([.,\s]\d{1,2})?"
+                 name="valueC" required placeholder="e.g. 37.4 or 37,4 or 37 4"
+                 autocomplete="off">
+        </label>
+        <label class="field">
+          <span>When</span>
+          <input type="datetime-local" name="at" value="{{.DefaultLocal}}">
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary">Record temperature</button>
+    </div>
+  </form>
+</section>
+{{end}}

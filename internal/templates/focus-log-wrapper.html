@@ -1,0 +1,7 @@
+{{define "focus-log-wrapper.html"}}
+{{$bp := .BasePath}}
+{{$data := .Data}}
+<div id="focus-log">
+  {{template "log-section.html" (dict "BasePath" $bp "Chart" $data.Chart "Events" $data.Events "ShowChart" $data.ShowChart)}}
+</div>
+{{end}}
