@@ -214,9 +214,9 @@ func buildMedicationView(m models.Medication, now time.Time) MedicationView {
 // early/ontime/late: based on interval since last taking.
 func computeStatus(m models.Medication, now time.Time) (string, string) {
 	usedInCycle := len(m.TakingsForCurrentCycle())
-	minTarget := m.PerCycle.Min
-	if minTarget > 0 && usedInCycle >= minTarget {
-		return "done", "Cycle target reached — no more doses needed."
+	maxTarget := m.PerCycle.Max
+	if maxTarget > 0 && usedInCycle >= maxTarget {
+		return "done", "Cycle max reached — no more doses needed."
 	}
 	if m.Interval.IsZero() {
 		return "none", "No interval configured — status unavailable."
@@ -228,21 +228,22 @@ func computeStatus(m models.Medication, now time.Time) (string, string) {
 	since := now.Sub(last)
 	minDur := time.Duration(m.Interval.MinHours * float64(time.Hour))
 	maxDur := time.Duration(m.Interval.MaxHours * float64(time.Hour))
+	intervalLine := fmt.Sprintf("Interval: %s", intervalLabel(m.Interval))
 	switch {
 	case since < minDur:
 		return "early", fmt.Sprintf(
-			"It is early to be used (time left: %s).",
-			formatDurationShort(minDur-since),
+			"It is early to be used (time left: %s).\n%s",
+			formatDurationShort(minDur-since), intervalLine,
 		)
 	case since <= maxDur:
 		return "ontime", fmt.Sprintf(
-			"It is right time to be used (time left: %s).",
-			formatDurationShort(maxDur-since),
+			"It is right time to be used (time left: %s).\n%s",
+			formatDurationShort(maxDur-since), intervalLine,
 		)
 	default:
 		return "late", fmt.Sprintf(
-			"It is late to be used (overdue by: %s).",
-			formatDurationShort(since-maxDur),
+			"It is late to be used (overdue by: %s).\n%s",
+			formatDurationShort(since-maxDur), intervalLine,
 		)
 	}
 }
@@ -327,6 +328,9 @@ func cycleLabel(c models.CycleDuration) string {
 func intervalLabel(i models.IntervalHours) string {
 	if i.IsZero() {
 		return ""
+	}
+	if i.MinHours == i.MaxHours {
+		return fmt.Sprintf("%g h", i.MinHours)
 	}
 	return fmt.Sprintf("%g–%g h", i.MinHours, i.MaxHours)
 }

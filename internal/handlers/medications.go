@@ -77,15 +77,29 @@ func medicationFromForm(r *http.Request) models.Medication {
 			Unit:  strings.TrimSpace(r.FormValue("cycleUnit")),
 		},
 		CyclesTotal: rangeFromForm("cyclesTotalMin", "cyclesTotalMax"),
-		Interval: models.IntervalHours{
-			MinHours: parseFloat(r.FormValue("intervalMin")),
-			MaxHours: parseFloat(r.FormValue("intervalMax")),
-		},
+		Interval: intervalFromForm(
+			parseFloat(r.FormValue("intervalMin")),
+			parseFloat(r.FormValue("intervalMax")),
+		),
 	}
 	if m.CycleDuration.Value > 0 && m.CycleDuration.Unit == "" {
 		m.CycleDuration.Unit = "day"
 	}
 	return m
+}
+
+// intervalFromForm collapses a "range" interval into a fixed value when the
+// user supplied only one of the two endpoints. If both are non-zero it keeps
+// them as-is; if only one is set, the other mirrors it; if both are zero, the
+// interval is treated as not configured.
+func intervalFromForm(minH, maxH float64) models.IntervalHours {
+	if minH == 0 && maxH != 0 {
+		minH = maxH
+	}
+	if maxH == 0 && minH != 0 {
+		maxH = minH
+	}
+	return models.IntervalHours{MinHours: minH, MaxHours: maxH}
 }
 
 // CreateMedication handles POST /medications.
