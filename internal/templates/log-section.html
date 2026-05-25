@@ -61,12 +61,18 @@
                   stroke-linecap="round" stroke-linejoin="round"/>
       {{end}}
 
+      <g class="points">
       {{range $chart.Points}}
-        <circle cx="{{.X}}" cy="{{.Y}}" r="3.5"
+        <circle class="temp-point"
+                data-point-x="{{.X}}"
+                data-point-y="{{.Y}}"
+                data-point-label="{{.Tooltip}}"
+                cx="{{.X}}" cy="{{.Y}}" r="3.5"
                 fill="#fff" stroke="#dc2626" stroke-width="2">
           <title>{{.Tooltip}}</title>
         </circle>
       {{end}}
+      </g>
     </svg>
 
     {{if $chart.Legend}}
@@ -95,7 +101,8 @@
     var cursor = svg && svg.querySelector('.chart-cursor');
     var tooltip = wrap.querySelector('.chart-tooltip');
     var markers = Array.prototype.slice.call(svg ? svg.querySelectorAll('.marker-line') : []);
-    if (!svg || !hit || !cursor || !tooltip || markers.length === 0) return;
+    var points  = Array.prototype.slice.call(svg ? svg.querySelectorAll('.temp-point')  : []);
+    if (!svg || !hit || !cursor || !tooltip || (markers.length === 0 && points.length === 0)) return;
 
     var viewBoxW = parseFloat(wrap.getAttribute('data-chart-w')) || 720;
     // Tolerance in viewBox X units. ~1.5% of width — enough to catch overlapping markers.
@@ -116,32 +123,56 @@
         var mx = parseFloat(line.getAttribute('data-marker-x'));
         if (Math.abs(mx - x) <= TOL) {
           hits.push({
+            kind: 'marker',
+            el: line,
             x: mx,
             color: line.getAttribute('data-marker-color') || '#1f2937',
             label: line.getAttribute('data-marker-label') || ''
           });
         }
       });
-      // Sort by distance to cursor, then by label, so the closest comes first.
+      points.forEach(function(p){
+        var px = parseFloat(p.getAttribute('data-point-x'));
+        if (Math.abs(px - x) <= TOL) {
+          hits.push({
+            kind: 'point',
+            el: p,
+            x: px,
+            color: '#dc2626',
+            label: p.getAttribute('data-point-label') || ''
+          });
+        }
+      });
+      // Sort: points first (they’re the primary data), then by distance, then by label.
       hits.sort(function(a, b){
+        if (a.kind !== b.kind) return a.kind === 'point' ? -1 : 1;
         var dx = Math.abs(a.x - x) - Math.abs(b.x - x);
         return dx !== 0 ? dx : a.label.localeCompare(b.label);
       });
       return hits;
     }
 
-    function highlight(activeXs){
+    function highlight(activeEls){
+      var activeSet = new Set(activeEls);
       markers.forEach(function(line){
-        var mx = parseFloat(line.getAttribute('data-marker-x'));
-        var active = activeXs.indexOf(mx) !== -1;
+        var active = activeSet.has(line);
         line.setAttribute('opacity', active ? '1' : '0.35');
         line.setAttribute('stroke-width', active ? '2.5' : '1.5');
+      });
+      points.forEach(function(p){
+        var active = activeSet.has(p);
+        p.setAttribute('r', active ? '5' : '3.5');
+        p.setAttribute('stroke-width', active ? '2.5' : '2');
       });
     }
     function resetHighlight(){
       markers.forEach(function(line){
         line.setAttribute('opacity', '0.85');
         line.setAttribute('stroke-width', '1.5');
+      });
+      points.forEach(function(p){
+        p.setAttribute('r', '3.5');
+        p.setAttribute('stroke-width', '2');
       });
     }
 
@@ -190,7 +221,7 @@
       cursor.setAttribute('x1', p.x);
       cursor.setAttribute('x2', p.x);
       cursor.setAttribute('opacity', '0.55');
-      highlight(hits.map(function(h){ return h.x; }));
+      highlight(hits.map(function(h){ return h.el; }));
       renderTooltip(hits, evt);
     }
     function handleLeave(){
