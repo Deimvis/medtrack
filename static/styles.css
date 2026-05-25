@@ -152,9 +152,16 @@ html, body {
   color: var(--danger);
   border-color: transparent;
   background: transparent;
+  font-size: 18px;
+  line-height: 1;
+}
+/* × glyph sits low in its em-box — wrap the glyph in a span and nudge it up
+   so the visual center matches the pen icon. */
+.btn-danger.ghost .icon-x {
+  display: inline-block;
   font-size: 22px;
   line-height: 1;
-  padding-bottom: 4px; /* compensate for × glyph sitting low on the line */
+  transform: translateY(-2px);
 }
 .btn-danger.ghost:hover { background: #fdecec; border-color: #fdecec; }
 
