@@ -1,0 +1,54 @@
+{{define "log.html"}}
+{{$bp := .BasePath}}
+{{$data := .Data}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log — {{$data.DiaryName}}</title>
+  <link rel="icon" href="{{$bp}}/static/favicon.svg">
+  <link rel="stylesheet" href="{{$bp}}/static/styles.css">
+</head>
+<body>
+<main class="container">
+  <header class="page-header">
+    <h1>Event log{{if $data.FilterMedName}} — {{$data.FilterMedName}}{{if $data.FilterDeleted}} <span class="badge-deleted">(deleted)</span>{{end}}{{end}}</h1>
+    <nav class="header-actions">
+      <a href="{{$bp}}/" class="btn ghost">← Back to diary</a>
+      {{if $data.FilterMed}}<a href="{{$bp}}/log" class="btn ghost">All medications</a>{{end}}
+    </nav>
+  </header>
+
+  <section class="table-wrap">
+    {{if eq (len $data.Events) 0}}
+      <p class="muted">No events yet.</p>
+    {{else}}
+    <table class="event-table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Medication</th>
+          <th>Event</th>
+          <th>Cycle</th>
+          <th>Taking</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range $data.Events}}
+        <tr>
+          <td data-label="When">{{.AtFormatted}}</td>
+          <td data-label="Medication">{{.MedicationName}}{{if .MedicationDel}} <span class="badge-deleted">(deleted)</span>{{end}}</td>
+          <td data-label="Event"><span class="event-type event-{{.Type}}">{{.TypeLabel}}</span></td>
+          <td data-label="Cycle" class="num">{{.CycleIndex}}</td>
+          <td data-label="Taking">{{if .TakingFmt}}{{.TakingFmt}}{{else}}<span class="muted">—</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{end}}
+  </section>
+</main>
+</body>
+</html>
+{{end}}

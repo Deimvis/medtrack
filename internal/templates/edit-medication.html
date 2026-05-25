@@ -1,0 +1,78 @@
+{{define "edit-medication.html"}}
+{{$bp := .BasePath}}
+{{$m := .Data}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit {{$m.Name}} — medtrack</title>
+  <link rel="icon" href="{{$bp}}/static/favicon.svg">
+  <link rel="stylesheet" href="{{$bp}}/static/styles.css">
+</head>
+<body>
+<main class="container">
+  <header class="page-header">
+    <h1>Edit medication</h1>
+    <nav class="header-actions">
+      <a href="{{$bp}}/" class="btn ghost">← Back to diary</a>
+    </nav>
+  </header>
+
+  <section class="add-section">
+    <form method="POST" action="{{$bp}}/medications/{{$m.ID}}">
+      <div class="field-grid">
+        <label class="field span-2">
+          <span>Name *</span>
+          <input name="name" required value="{{$m.Name}}">
+        </label>
+
+        <fieldset class="field">
+          <legend>Per cycle</legend>
+          <div class="row">
+            <input type="number" min="0" name="perCycleMin" value="{{if $m.PerCycle.Min}}{{$m.PerCycle.Min}}{{end}}" placeholder="min">
+            <span>–</span>
+            <input type="number" min="0" name="perCycleMax" value="{{if $m.PerCycle.Max}}{{$m.PerCycle.Max}}{{end}}" placeholder="max">
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Cycle</legend>
+          <div class="row">
+            <input type="number" min="0" step="any" name="cycleValue" value="{{if $m.CycleDuration.Value}}{{$m.CycleDuration.Value}}{{else}}1{{end}}">
+            <select name="cycleUnit">
+              <option value="hour" {{if eq $m.CycleDuration.Unit "hour"}}selected{{end}}>hour(s)</option>
+              <option value="day" {{if or (eq $m.CycleDuration.Unit "day") (eq $m.CycleDuration.Unit "")}}selected{{end}}>day(s)</option>
+              <option value="week" {{if eq $m.CycleDuration.Unit "week"}}selected{{end}}>week(s)</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Cycles total</legend>
+          <div class="row">
+            <input type="number" min="0" name="cyclesTotalMin" value="{{if $m.CyclesTotal.Min}}{{$m.CyclesTotal.Min}}{{end}}" placeholder="min">
+            <span>–</span>
+            <input type="number" min="0" name="cyclesTotalMax" value="{{if $m.CyclesTotal.Max}}{{$m.CyclesTotal.Max}}{{end}}" placeholder="max">
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Interval between doses (hours)</legend>
+          <div class="row">
+            <input type="number" min="0" step="any" name="intervalMin" value="{{if $m.Interval.MinHours}}{{$m.Interval.MinHours}}{{end}}" placeholder="X">
+            <span>–</span>
+            <input type="number" min="0" step="any" name="intervalMax" value="{{if $m.Interval.MaxHours}}{{$m.Interval.MaxHours}}{{end}}" placeholder="Y">
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Save changes</button>
+      </div>
+    </form>
+  </section>
+</main>
+</body>
+</html>
+{{end}}

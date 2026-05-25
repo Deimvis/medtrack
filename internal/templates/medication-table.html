@@ -1,0 +1,25 @@
+{{define "medication-table.html"}}
+{{$bp := .BasePath}}
+{{$data := .Data}}
+<table id="med-table" class="med-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Dose</th>
+      <th>Cycle</th>
+      <th>First in cycle</th>
+      <th>Last in cycle</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{if eq (len $data.Medications) 0}}
+    <tr class="empty"><td colspan="6">No medications yet — add one below.</td></tr>
+    {{else}}
+      {{range $data.Medications}}
+        {{template "medication-row.html" (dict "Data" . "BasePath" $bp)}}
+      {{end}}
+    {{end}}
+  </tbody>
+</table>
+{{end}}

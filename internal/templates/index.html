@@ -1,0 +1,178 @@
+{{define "index.html"}}
+{{$bp := .BasePath}}
+{{$data := .Data}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{$data.DiaryName}} — medtrack</title>
+  <link rel="icon" href="{{$bp}}/static/favicon.svg">
+  <link rel="stylesheet" href="{{$bp}}/static/styles.css">
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+<main class="container">
+  <header class="page-header">
+    <h1 id="diary-title" contenteditable="true"
+        spellcheck="false">{{$data.DiaryName}}</h1>
+    <nav class="header-actions">
+      <a href="{{$bp}}/log" class="btn ghost">Log</a>
+      <a href="{{$bp}}/export.json" class="btn ghost" download>Export</a>
+      <label class="btn ghost">
+        Import
+        <input id="import-input" type="file" accept="application/json" hidden>
+      </label>
+      <button class="btn warn"
+              hx-post="{{$bp}}/state/reset-progress"
+              hx-target="#med-table"
+              hx-swap="outerHTML"
+              hx-confirm="Reset all increments? This deletes every dose record and resets every cycle counter, but keeps your medication configuration. This cannot be undone — consider Export first.">Reset progress</button>
+      <button class="btn danger"
+              hx-post="{{$bp}}/state/clear"
+              hx-target="#med-table"
+              hx-swap="outerHTML"
+              hx-confirm="Clear EVERYTHING? This deletes all medications, dose history and event logs. This cannot be undone — consider Export first.">Clear all</button>
+    </nav>
+  </header>
+
+  <section class="table-wrap">
+    {{template "medication-table.html" (dict "Data" $data "BasePath" $bp)}}
+  </section>
+
+  <section class="add-section">
+    <h2>Add medication</h2>
+    <form id="add-form"
+          hx-post="{{$bp}}/medications"
+          hx-target="#med-table"
+          hx-swap="outerHTML"
+          hx-on::after-request="if(event.detail.successful){ this.reset(); document.getElementById('cycleValue').value=1; document.getElementById('cycleUnit').value='day'; document.getElementById('add-warning').textContent=''; }">
+      <div class="field-grid">
+        <label class="field span-2">
+          <span>Name *</span>
+          <input name="name" required autocomplete="off">
+        </label>
+
+        <fieldset class="field">
+          <legend>Per cycle</legend>
+          <div class="row">
+            <input type="number" min="0" name="perCycleMin" placeholder="min">
+            <span>–</span>
+            <input type="number" min="0" name="perCycleMax" placeholder="max">
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Cycle</legend>
+          <div class="row">
+            <input type="number" min="0" step="any" id="cycleValue" name="cycleValue" value="1">
+            <select id="cycleUnit" name="cycleUnit">
+              <option value="hour">hour(s)</option>
+              <option value="day" selected>day(s)</option>
+              <option value="week">week(s)</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Cycles total</legend>
+          <div class="row">
+            <input type="number" min="0" name="cyclesTotalMin" placeholder="min">
+            <span>–</span>
+            <input type="number" min="0" name="cyclesTotalMax" placeholder="max">
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Interval between doses (hours)</legend>
+          <div class="row">
+            <input type="number" min="0" step="any" name="intervalMin" placeholder="X">
+            <span>–</span>
+            <input type="number" min="0" step="any" name="intervalMax" placeholder="Y">
+          </div>
+        </fieldset>
+      </div>
+
+      <p id="add-warning" class="interval-warning-inline" role="status"></p>
+
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Add medication</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<script>
+(function(){
+  var BASE = {{$bp}};
+  var form = document.getElementById('add-form');
+  var warningEl = document.getElementById('add-warning');
+
+  function unitHours(u){
+    if (u === 'hour') return 1;
+    if (u === 'week') return 24*7;
+    return 24; // day or unknown
+  }
+
+  function checkIntervalWarning(){
+    var perMax = parseFloat(form.elements['perCycleMax'].value) || parseFloat(form.elements['perCycleMin'].value) || 0;
+    var cycleValue = parseFloat(form.elements['cycleValue'].value) || 0;
+    var cycleHours = cycleValue > 0 ? cycleValue * unitHours(form.elements['cycleUnit'].value) : 24;
+    var intervalMin = parseFloat(form.elements['intervalMin'].value) || 0;
+    if (perMax > 0 && intervalMin > 0) {
+      var fit = cycleHours / intervalMin;
+      if (fit < perMax) {
+        warningEl.textContent = '⚠ Interval X='+intervalMin+'h fits at most '+fit+' doses per '+cycleHours+'h cycle, but per-cycle max is '+perMax+'.';
+        return;
+      }
+    }
+    warningEl.textContent = '';
+  }
+  form.addEventListener('input', checkIntervalWarning);
+  form.addEventListener('change', checkIntervalWarning);
+
+  // Diary title (contenteditable) — POST on blur.
+  var titleEl = document.getElementById('diary-title');
+  titleEl.addEventListener('blur', function(){
+    var data = new FormData();
+    data.append('name', titleEl.textContent.trim());
+    fetch(BASE + '/diary/name', { method: 'POST', body: data });
+  });
+  titleEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+  });
+
+  // Close any open <details class="menu"> when clicking outside it.
+  document.addEventListener('click', function(e){
+    document.querySelectorAll('details.menu[open]').forEach(function(d){
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+
+  // Import: read JSON and POST it.
+  var importInput = document.getElementById('import-input');
+  importInput.addEventListener('change', function(){
+    var file = importInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      fetch(BASE + '/import.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: reader.result
+      }).then(function(resp){
+        if (resp.ok) {
+          htmx.ajax('GET', BASE + '/medications/list', { target: '#med-table', swap: 'outerHTML' });
+        } else {
+          resp.text().then(function(t){ alert('Import failed: ' + t); });
+        }
+      });
+      importInput.value = '';
+    };
+    reader.readAsText(file);
+  });
+})();
+</script>
+</body>
+</html>
+{{end}}
